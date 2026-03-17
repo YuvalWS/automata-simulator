@@ -60,6 +60,13 @@
   background: var(--color-bg);
 }
 
+.sim-btn-random {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+
 .sim-btn-exit {
   width: 100%;
   background: var(--color-bg);

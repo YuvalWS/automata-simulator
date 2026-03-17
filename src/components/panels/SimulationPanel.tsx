@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
+import { useAutomatonStore } from '@/stores/automaton-store';
+import { generateRandomWord } from '@/utils/random-word';
 import './SimulationPanel.css';
 
 export function SimulationPanel() {
@@ -28,6 +30,7 @@ export function SimulationPanel() {
   const batchResults = useSimulationStore((s) => s.batchResults);
   const clearBatchResults = useSimulationStore((s) => s.clearBatchResults);
 
+  const alphabet = useAutomatonStore((s) => s.automaton.alphabet);
   const snapshot = getCurrentSnapshot(useSimulationStore.getState());
   const hasErrors = validationMessages.some((m) => m.type === 'error');
 
@@ -75,6 +78,14 @@ export function SimulationPanel() {
                 placeholder="e.g. a,b,a or aba"
                 disabled={!!trace}
               />
+              <button
+                className="sim-btn sim-btn-random"
+                onClick={() => setWordInput(generateRandomWord(alphabet).join(','))}
+                disabled={!!trace || alphabet.length === 0}
+                title="Generate random word"
+              >
+                Random
+              </button>
               {!trace ? (
                 <button
                   className="sim-btn sim-btn-primary"
