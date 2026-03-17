@@ -1,0 +1,206 @@
+import { create } from 'zustand';
+import type { Automaton, AutomatonState, Transition } from '@/models/automaton';
+import { createEmptyAutomaton } from '@/models/automaton';
+import type { Point, Viewport } from '@/models/geometry';
+import { AutomatonType } from '@/models/types';
+import { generateId, generateStateName } from '@/utils/id';
+import { useHistoryStore } from './history-store';
+
+function pushHistory(automaton: Automaton) {
+  useHistoryStore.getState().pushState(automaton);
+}
+
+interface AutomatonStore {
+  automaton: Automaton;
+
+  // Automaton-level actions
+  setAutomaton: (automaton: Automaton) => void;
+  newAutomaton: (name?: string) => void;
+  setName: (name: string) => void;
+  setType: (type: AutomatonType) => void;
+  setAlphabet: (alphabet: string[]) => void;
+  setViewport: (viewport: Viewport) => void;
+
+  // State actions
+  addState: (position: Point) => AutomatonState;
+  removeState: (id: string) => void;
+  updateState: (id: string, updates: Partial<Pick<AutomatonState, 'name' | 'position' | 'isInitial' | 'isAccepting'>>) => void;
+  setInitialState: (id: string) => void;
+  toggleAccepting: (id: string) => void;
+
+  // Transition actions
+  addTransition: (sourceId: string, targetId: string, symbols: string[]) => Transition;
+  removeTransition: (id: string) => void;
+  updateTransition: (id: string, updates: Partial<Pick<Transition, 'symbols' | 'controlPointOffset'>>) => void;
+
+  // History actions
+  undo: () => void;
+  redo: () => void;
+}
+
+export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
+  automaton: createEmptyAutomaton(),
+
+  setAutomaton: (automaton) => set({ automaton }),
+
+  newAutomaton: (name) => {
+    useHistoryStore.getState().clear();
+    set({ automaton: createEmptyAutomaton(name) });
+  },
+
+  setName: (name) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, name } }));
+  },
+
+  setType: (type) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, type } }));
+  },
+
+  setAlphabet: (alphabet) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, alphabet } }));
+  },
+
+  // Viewport changes are NOT undoable
+  setViewport: (viewport) =>
+    set((s) => ({ automaton: { ...s.automaton, viewport } })),
+
+  addState: (position) => {
+    pushHistory(get().automaton);
+    const existingNames = get().automaton.states.map((s) => s.name);
+    const newState: AutomatonState = {
+      id: generateId(),
+      name: generateStateName(existingNames),
+      position,
+      isInitial: get().automaton.states.length === 0,
+      isAccepting: false,
+    };
+    set((s) => ({
+      automaton: { ...s.automaton, states: [...s.automaton.states, newState] },
+    }));
+    return newState;
+  },
+
+  removeState: (id) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        states: s.automaton.states.filter((st) => st.id !== id),
+        transitions: s.automaton.transitions.filter(
+          (t) => t.sourceId !== id && t.targetId !== id,
+        ),
+      },
+    }));
+  },
+
+  updateState: (id, updates) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        states: s.automaton.states.map((st) => {
+          if (st.id !== id) {
+            if (updates.isInitial) {
+              return { ...st, isInitial: false };
+            }
+            return st;
+          }
+          return { ...st, ...updates };
+        }),
+      },
+    }));
+  },
+
+  setInitialState: (id) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        states: s.automaton.states.map((st) => ({
+          ...st,
+          isInitial: st.id === id,
+        })),
+      },
+    }));
+  },
+
+  toggleAccepting: (id) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        states: s.automaton.states.map((st) =>
+          st.id === id ? { ...st, isAccepting: !st.isAccepting } : st,
+        ),
+      },
+    }));
+  },
+
+  addTransition: (sourceId, targetId, symbols) => {
+    pushHistory(get().automaton);
+    const existing = get().automaton.transitions.find(
+      (t) => t.sourceId === sourceId && t.targetId === targetId,
+    );
+    if (existing) {
+      const mergedSymbols = [...new Set([...existing.symbols, ...symbols])];
+      set((s) => ({
+        automaton: {
+          ...s.automaton,
+          transitions: s.automaton.transitions.map((t) =>
+            t.id === existing.id ? { ...t, symbols: mergedSymbols } : t,
+          ),
+        },
+      }));
+      return { ...existing, symbols: mergedSymbols };
+    }
+
+    const newTransition: Transition = {
+      id: generateId(),
+      sourceId,
+      targetId,
+      symbols,
+    };
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        transitions: [...s.automaton.transitions, newTransition],
+      },
+    }));
+    return newTransition;
+  },
+
+  removeTransition: (id) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        transitions: s.automaton.transitions.filter((t) => t.id !== id),
+      },
+    }));
+  },
+
+  updateTransition: (id, updates) => {
+    pushHistory(get().automaton);
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        transitions: s.automaton.transitions.map((t) =>
+          t.id === id ? { ...t, ...updates } : t,
+        ),
+      },
+    }));
+  },
+
+  undo: () => {
+    const result = useHistoryStore.getState().undo(get().automaton);
+    if (result) set({ automaton: result });
+  },
+
+  redo: () => {
+    const result = useHistoryStore.getState().redo(get().automaton);
+    if (result) set({ automaton: result });
+  },
+}));

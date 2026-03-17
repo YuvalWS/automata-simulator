@@ -1,0 +1,95 @@
+import { describe, it, expect } from 'vitest';
+import { serializeToJson, deserializeFromJson } from '@/services/serialization/json-serializer';
+import type { Automaton } from '@/models/automaton';
+import { AutomatonType } from '@/models/types';
+
+function createTestAutomaton(): Automaton {
+  return {
+    id: 'test-id',
+    name: 'Test DFA',
+    type: AutomatonType.DFA,
+    alphabet: ['a', 'b'],
+    states: [
+      { id: 's1', name: 'q0', position: { x: 100, y: 200 }, isInitial: true, isAccepting: false },
+      { id: 's2', name: 'q1', position: { x: 300, y: 200 }, isInitial: false, isAccepting: true },
+    ],
+    transitions: [
+      { id: 't1', sourceId: 's1', targetId: 's2', symbols: ['a'] },
+      { id: 't2', sourceId: 's2', targetId: 's2', symbols: ['a', 'b'] },
+      { id: 't3', sourceId: 's2', targetId: 's1', symbols: ['b'], controlPointOffset: { x: 0, y: -20 } },
+    ],
+    viewport: { panX: 50, panY: 30, zoom: 1.5 },
+  };
+}
+
+describe('JSON serializer', () => {
+  it('round-trips an automaton exactly', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+
+    expect(restored).toEqual(original);
+  });
+
+  it('preserves state positions', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+
+    expect(restored.states[0]!.position).toEqual({ x: 100, y: 200 });
+    expect(restored.states[1]!.position).toEqual({ x: 300, y: 200 });
+  });
+
+  it('preserves viewport', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+
+    expect(restored.viewport).toEqual({ panX: 50, panY: 30, zoom: 1.5 });
+  });
+
+  it('preserves controlPointOffset', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+
+    expect(restored.transitions[2]!.controlPointOffset).toEqual({ x: 0, y: -20 });
+  });
+
+  it('preserves transition symbols', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+
+    expect(restored.transitions[1]!.symbols).toEqual(['a', 'b']);
+  });
+
+  it('includes version field', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original);
+    const parsed = JSON.parse(json);
+
+    expect(parsed.version).toBe('1.0.0');
+  });
+
+  it('rejects invalid JSON', () => {
+    expect(() => deserializeFromJson('not json')).toThrow();
+  });
+
+  it('rejects JSON missing required fields', () => {
+    expect(() => deserializeFromJson('{"version":"1.0.0"}')).toThrow();
+  });
+
+  it('rejects automaton with invalid type', () => {
+    const original = createTestAutomaton();
+    const json = serializeToJson(original).replace('"DFA"', '"INVALID"');
+    expect(() => deserializeFromJson(json)).toThrow();
+  });
+
+  it('rejects negative zoom', () => {
+    const original = createTestAutomaton();
+    const obj = JSON.parse(serializeToJson(original));
+    obj.automaton.viewport.zoom = -1;
+    expect(() => deserializeFromJson(JSON.stringify(obj))).toThrow();
+  });
+});

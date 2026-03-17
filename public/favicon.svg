@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="30" cy="50" r="18" fill="none" stroke="#333" stroke-width="3"/>
+  <circle cx="70" cy="50" r="18" fill="none" stroke="#333" stroke-width="3"/>
+  <circle cx="70" cy="50" r="14" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M48 50 L52 50" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+  </defs>
+  <line x1="5" y1="50" x2="12" y2="50" stroke="#333" stroke-width="3" marker-end="url(#arrow)"/>
+</svg>
