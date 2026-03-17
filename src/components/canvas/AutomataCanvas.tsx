@@ -27,7 +27,6 @@ export function AutomataCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const automaton = useAutomatonStore((s) => s.automaton);
   const addState = useAutomatonStore((s) => s.addState);
-  const removeTransition = useAutomatonStore((s) => s.removeTransition);
   const updateState = useAutomatonStore((s) => s.updateState);
   const addTransition = useAutomatonStore((s) => s.addTransition);
   const updateTransition = useAutomatonStore((s) => s.updateTransition);

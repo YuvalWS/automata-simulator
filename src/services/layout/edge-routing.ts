@@ -1,6 +1,6 @@
 import type { Point } from '@/models/geometry';
 import type { AutomatonState, Transition } from '@/models/automaton';
-import { perpendicular, normalize, scale, add, midpoint, distance } from '@/utils/math';
+import { perpendicular, normalize, scale, add, midpoint } from '@/utils/math';
 
 const STATE_RADIUS = 28;
 const PARALLEL_OFFSET = 25;

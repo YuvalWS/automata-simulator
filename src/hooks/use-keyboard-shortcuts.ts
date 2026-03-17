@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
-import { EditorTool } from '@/models/types';
 import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
 import { clearAutosave } from './use-autosave';
 
