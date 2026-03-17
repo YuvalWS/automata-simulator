@@ -1,5 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
+import type { Automaton } from '@/models/automaton';
 import { useEditorStore } from '@/stores/editor-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { computeEdgePaths } from '@/services/layout/edge-routing';
@@ -10,6 +11,7 @@ import { InitialArrow } from './InitialArrow';
 import { GhostEdge } from './GhostEdge';
 import { GridBackground } from './GridBackground';
 import { TransitionSymbolModal } from './TransitionSymbolModal';
+import { useHistoryStore } from '@/stores/history-store';
 import { snapToAlignment, computeSnapGuides } from '@/utils/snap';
 import type { SnapGuide } from '@/utils/snap';
 import './AutomataCanvas.css';
@@ -30,6 +32,7 @@ export function AutomataCanvas() {
   const automaton = useAutomatonStore((s) => s.automaton);
   const addState = useAutomatonStore((s) => s.addState);
   const updateState = useAutomatonStore((s) => s.updateState);
+  const moveState = useAutomatonStore((s) => s.moveState);
   const addTransition = useAutomatonStore((s) => s.addTransition);
   const updateTransition = useAutomatonStore((s) => s.updateTransition);
   const setViewport = useAutomatonStore((s) => s.setViewport);
@@ -53,12 +56,13 @@ export function AutomataCanvas() {
 
   const { panX, panY, zoom } = automaton.viewport;
   const [isPanning, setIsPanning] = useState(false);
-  const [dragState, setDragState] = useState<{ id: string; offset: { x: number; y: number } } | null>(null);
+  const [dragState, setDragState] = useState<{ id: string; offset: { x: number; y: number }; preDragAutomaton: Automaton } | null>(null);
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
+  const didDrag = useRef(false);
 
   const getSvgPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -137,13 +141,14 @@ export function AutomataCanvas() {
       if (simIsActive) return;
 
       if (dragState) {
+        didDrag.current = true;
         const point = getSvgPoint(e.clientX, e.clientY);
         const rawPos = {
           x: point.x + dragState.offset.x,
           y: point.y + dragState.offset.y,
         };
         const snappedPos = snapToAlignment(rawPos, dragState.id, automaton.states);
-        updateState(dragState.id, { position: snappedPos });
+        moveState(dragState.id, snappedPos);
         setSnapGuides(computeSnapGuides(snappedPos, dragState.id, automaton.states));
         return;
       }
@@ -176,6 +181,11 @@ export function AutomataCanvas() {
       if (simIsActive) return;
 
       if (dragState) {
+        if (didDrag.current) {
+          // Push the pre-drag automaton to history so undo restores the original position in one step
+          useHistoryStore.getState().pushState(dragState.preDragAutomaton);
+        }
+        didDrag.current = false;
         setDragState(null);
         setSnapGuides([]);
         return;
@@ -223,6 +233,7 @@ export function AutomataCanvas() {
       if (simIsActive) return;
       e.stopPropagation();
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
+      didDrag.current = false;
 
       setSelection({ type: 'state', id: stateId });
       const state = automaton.states.find((s) => s.id === stateId);
@@ -234,6 +245,7 @@ export function AutomataCanvas() {
             x: state.position.x - point.x,
             y: state.position.y - point.y,
           },
+          preDragAutomaton: automaton,
         });
       }
     },
