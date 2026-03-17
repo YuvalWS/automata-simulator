@@ -6,6 +6,7 @@ import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-
 import { clearAutosave } from '@/hooks/use-autosave';
 import { useTheme } from '@/hooks/use-theme';
 import { computeFitViewport } from '@/utils/fit-viewport';
+import { exportAutomatonAsPng } from '@/services/export/png-export';
 import './Toolbar.css';
 
 export function Toolbar() {
@@ -39,6 +40,16 @@ export function Toolbar() {
   const handleSave = () => {
     saveToJsonFile(automaton);
     setDirty(false);
+  };
+
+  const handleExportPng = async () => {
+    const svg = document.querySelector('.automata-canvas') as SVGSVGElement | null;
+    if (!svg) return;
+    try {
+      await exportAutomatonAsPng(svg, automaton.states);
+    } catch {
+      // Export failed silently
+    }
   };
 
   const handleLoad = async () => {
@@ -86,6 +97,14 @@ export function Toolbar() {
         </button>
         <button className="toolbar-btn" onClick={handleLoad} disabled={simIsActive} title="Load (Ctrl+O)">
           Load
+        </button>
+        <button
+          className="toolbar-btn"
+          onClick={handleExportPng}
+          disabled={automaton.states.length === 0}
+          title="Export as PNG"
+        >
+          PNG
         </button>
         <span className="toolbar-separator" />
         <button
