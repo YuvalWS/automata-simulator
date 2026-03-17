@@ -75,8 +75,62 @@
   font-size: 13px;
 }
 
+.toolbar-simulate {
+  padding: 5px 14px;
+  font-weight: 600;
+  background: #059669;
+  color: white;
+  border-color: #059669;
+}
+
+.toolbar-simulate:hover:not(:disabled) {
+  background: #047857;
+  border-color: #047857;
+}
+
+.toolbar-simulate-active {
+  padding: 5px 14px;
+  font-weight: 600;
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+}
+
+.toolbar-simulate-active:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
 .toolbar-actions {
   margin-left: 12px;
+}
+
+.toolbar-zoom {
+  gap: 2px;
+}
+
+.toolbar-zoom-btn {
+  min-width: 28px;
+  padding: 4px 6px;
+  font-size: 16px;
+  font-weight: 600;
+  justify-content: center;
+}
+
+.toolbar-zoom-display {
+  min-width: 48px;
+  text-align: center;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.toolbar-zoom-display:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .toolbar-info {

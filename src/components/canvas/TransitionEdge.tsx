@@ -5,18 +5,29 @@ interface TransitionEdgeProps {
   edgePath: EdgePath;
   transition: Transition;
   isSelected: boolean;
+  isSimActive?: boolean;
   onClick: (e: React.MouseEvent, transitionId: string) => void;
   onDoubleClick: (e: React.MouseEvent, transitionId: string) => void;
 }
 
-export function TransitionEdge({ edgePath, transition, isSelected, onClick, onDoubleClick }: TransitionEdgeProps) {
-  const strokeColor = isSelected ? 'var(--color-transition-selected)' : 'var(--color-transition-stroke)';
-  const strokeWidth = isSelected ? 2.5 : 2;
+export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, onClick, onDoubleClick }: TransitionEdgeProps) {
+  let strokeColor = 'var(--color-transition-stroke)';
+  let strokeWidth = 2;
+
+  if (isSimActive) {
+    strokeColor = 'var(--color-accent)';
+    strokeWidth = 3;
+  } else if (isSelected) {
+    strokeColor = 'var(--color-transition-selected)';
+    strokeWidth = 2.5;
+  }
+
   const label = transition.symbols.join(', ');
+  const className = `transition-edge${isSimActive ? ' transition-edge--sim-active' : ''}`;
 
   return (
     <g
-      className="transition-edge"
+      className={className}
       data-testid={`transition-${transition.id}`}
       onClick={(e) => onClick(e, transition.id)}
       onDoubleClick={(e) => onDoubleClick(e, transition.id)}

@@ -1,14 +1,21 @@
 # Automata Simulator
 
-A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, save/load your work, and edit states and transitions with a professional interface.
+A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface.
 
 ## Features
 
 - **Interactive diagram editor** — drag states to reposition, scroll to zoom, drag canvas to pan
+- **Word simulation** — step-by-step DFA/NFA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
+- **Batch simulation** — test multiple words at once, see accept/reject results for each
+- **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state
+- **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA & NFA support** — toggle between deterministic and nondeterministic modes
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
 - **Smart self-loop placement** — self-loops automatically position away from connected edges
 - **Snap-to-alignment** — states snap to horizontal/vertical alignment when dragged near other states, with visual guide lines
+- **New diagram with q0** — new automata start with an initial state already placed
+- **Hover "+" hint** — hover on empty canvas to see a placement hint; click to add a state
+- **Zoom controls** — scroll to zoom + toolbar +/- buttons with percentage display
 - **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport)
 - **Auto-save** — current state automatically saved to browser storage; restored on page reload
 - **Unsaved changes warning** — browser warns before closing tab with unsaved work
@@ -32,18 +39,36 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 10. **Save** — click "Save" or press Ctrl+S
 11. **Load** — click "Load" or press Ctrl+O and select a JSON file
 
+## Simulation
+
+1. Click **Simulate** in the toolbar (or build your automaton first)
+2. Enter a word (e.g., `a,b,a` or `aba`) and click **Run** — the animation auto-plays and shows the final accept/reject result
+3. Use step controls or keyboard shortcuts to replay the trace
+4. Active states glow green; traversed transitions are highlighted
+5. Switch to **Batch** mode to test multiple words at once (one per line)
+6. Press **Escape** or click **Exit Sim** to return to editing
+
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
 | N | New State (click canvas to place) |
 | Delete / Backspace | Delete selected element |
-| Escape | Cancel current action |
+| Escape | Cancel / Exit simulation |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
 | Ctrl+S | Save to file |
 | Ctrl+O | Load from file |
 | Ctrl+N | New automaton |
+
+### During Simulation
+
+| Key | Action |
+|-----|--------|
+| Space | Step forward / Run |
+| Enter | Toggle auto-run |
+| Left / Right arrow | Step backward / forward |
+| Escape | Exit simulation |
 
 ## Quick Start (Docker)
 
@@ -72,7 +97,7 @@ Serves the optimized build at http://localhost:8080.
 ```
 src/
 ├── models/        # Data types: Automaton, State, Transition, Zod schemas
-├── stores/        # Zustand stores: automaton data, editor UI, undo/redo history
+├── stores/        # Zustand stores: automaton data, editor UI, undo/redo history, simulation
 ├── components/
 │   ├── canvas/    # SVG rendering: states, transitions, arrows, grid, symbol modal
 │   ├── toolbar/   # File operations, new state button, undo/redo
@@ -80,11 +105,12 @@ src/
 │   └── help/      # Keyboard shortcuts tooltip
 ├── services/
 │   ├── serialization/  # JSON save & load with Zod validation
-│   └── layout/         # Edge routing, Bezier curves, label overlap avoidance, self-loop placement
+│   ├── layout/         # Edge routing, Bezier curves, label overlap avoidance, self-loop placement
+│   └── simulation/     # DFA/NFA trace engine, pre-simulation validator
 ├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment
 tests/
-├── unit/          # 89 tests covering stores, serializers, edge-routing, utils, snap
+├── unit/          # 183 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -97,5 +123,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (89 unit tests)
-- Docker + nginx for deployment
+- Vitest for tests (183 unit tests)
+- Docker + Express for deployment

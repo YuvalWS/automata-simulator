@@ -2,6 +2,8 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .automata-canvas {
@@ -10,6 +12,8 @@
   background: var(--color-canvas-bg);
   cursor: default;
   outline: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .automata-canvas.cursor-crosshair {
@@ -35,4 +39,40 @@
 
 .transition-edge:hover path {
   stroke-width: 3;
+}
+
+/* Hover "+" hint for adding states */
+.canvas-add-hint {
+  pointer-events: all;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.canvas-add-hint:hover circle {
+  r: 14;
+}
+
+/* Simulation state highlights */
+.state-node--sim-active > circle:first-of-type {
+  stroke: var(--color-accent);
+  fill: #ecfdf5;
+}
+
+.state-node--sim-rejected > circle:first-of-type {
+  stroke: var(--color-danger);
+  fill: #fef2f2;
+}
+
+.transition-edge--sim-active path:nth-of-type(2) {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+
+@keyframes pulse-sim {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.state-node--sim-active {
+  animation: pulse-sim 1s ease-in-out infinite;
 }
