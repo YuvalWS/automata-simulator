@@ -10,6 +10,7 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA & NFA support** — toggle between deterministic and nondeterministic modes
+- **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
 - **Smart self-loop placement** — self-loops automatically position away from connected edges
 - **Snap-to-alignment** — states snap to horizontal/vertical alignment when dragged near other states, with visual guide lines
@@ -27,6 +28,7 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Styled transition editor** — custom modal for entering/editing transition symbols (no browser prompts)
 - **Intuitive interactions** — click two states to create a transition; double-click for self-loop; drag handle on hover
 - **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts and instructions; auto-opens on first visit
+- **Mobile warning** — displays a message on small screens (< 768px) that the app requires a desktop browser
 
 ## How to Use
 
@@ -114,7 +116,7 @@ src/
 ├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning, theme
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 193 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 205 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -127,5 +129,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (193 unit tests)
+- Vitest for tests (205 unit tests)
 - Docker + Express for deployment

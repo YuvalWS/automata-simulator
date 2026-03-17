@@ -34,6 +34,7 @@ const instructions = [
   'Click "Fit" in the zoom controls to fit all states in view.',
   'Click the sun/moon icon to toggle dark mode.',
   'Click "PNG" to export the diagram as an image.',
+  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
 ];
 
 export function ShortcutsTooltip() {
