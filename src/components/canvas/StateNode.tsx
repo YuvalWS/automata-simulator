@@ -145,6 +145,7 @@ export function StateNode({
               fill="white"
               pointerEvents="none"
               opacity={0}
+              transform={`rotate(${angle * (180 / Math.PI)}, ${hx}, ${hy})`}
             >
               {'\u2192'}
             </text>
