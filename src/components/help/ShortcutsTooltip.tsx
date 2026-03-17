@@ -33,7 +33,14 @@ const instructions = [
 ];
 
 export function ShortcutsTooltip() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    const seen = localStorage.getItem('automata-help-seen');
+    if (!seen) {
+      localStorage.setItem('automata-help-seen', '1');
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div className="shortcuts-container">
