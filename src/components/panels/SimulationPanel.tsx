@@ -20,18 +20,25 @@ export function SimulationPanel() {
   const currentStep = useSimulationStore((s) => s.currentStep);
   const word = useSimulationStore((s) => s.word);
   const validationMessages = useSimulationStore((s) => s.validationMessages);
+  const batchMode = useSimulationStore((s) => s.batchMode);
+  const setBatchMode = useSimulationStore((s) => s.setBatchMode);
+  const batchInput = useSimulationStore((s) => s.batchInput);
+  const setBatchInput = useSimulationStore((s) => s.setBatchInput);
+  const runBatch = useSimulationStore((s) => s.runBatch);
+  const batchResults = useSimulationStore((s) => s.batchResults);
+  const clearBatchResults = useSimulationStore((s) => s.clearBatchResults);
 
   const snapshot = getCurrentSnapshot(useSimulationStore.getState());
   const hasErrors = validationMessages.some((m) => m.type === 'error');
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !batchMode) {
         e.preventDefault();
         startSimulation();
       }
     },
-    [startSimulation],
+    [startSimulation, batchMode],
   );
 
   return (
@@ -39,33 +46,79 @@ export function SimulationPanel() {
       <div className="panel-section">
         <h3 className="panel-title">Simulation</h3>
 
-        <div className="sim-input-group">
-          <label className="panel-label">Word (symbols)</label>
-          <div className="sim-input-row">
-            <input
-              className="panel-input sim-word-input"
-              value={wordInput}
-              onChange={(e) => setWordInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g. a,b,a or aba"
-              disabled={!!trace}
-            />
-            {!trace ? (
-              <button
-                className="sim-btn sim-btn-primary"
-                onClick={startSimulation}
-                disabled={hasErrors && validationMessages.length > 0 && !wordInput}
-              >
-                Run
-              </button>
-            ) : (
-              <button className="sim-btn sim-btn-secondary" onClick={stopTrace}>
-                Reset
-              </button>
-            )}
-          </div>
-          <span className="sim-hint">Separate multi-char symbols with commas or spaces</span>
+        {/* Mode toggle */}
+        <div className="sim-mode-toggle">
+          <button
+            className={`sim-mode-btn ${!batchMode ? 'sim-mode-btn-active' : ''}`}
+            onClick={() => setBatchMode(false)}
+          >
+            Single
+          </button>
+          <button
+            className={`sim-mode-btn ${batchMode ? 'sim-mode-btn-active' : ''}`}
+            onClick={() => setBatchMode(true)}
+          >
+            Batch
+          </button>
         </div>
+
+        {/* Single word input */}
+        {!batchMode && (
+          <div className="sim-input-group">
+            <label className="panel-label">Word (symbols)</label>
+            <div className="sim-input-row">
+              <input
+                className="panel-input sim-word-input"
+                value={wordInput}
+                onChange={(e) => setWordInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g. a,b,a or aba"
+                disabled={!!trace}
+              />
+              {!trace ? (
+                <button
+                  className="sim-btn sim-btn-primary"
+                  onClick={startSimulation}
+                  disabled={hasErrors && validationMessages.length > 0 && !wordInput}
+                >
+                  Run
+                </button>
+              ) : (
+                <button className="sim-btn sim-btn-secondary" onClick={stopTrace}>
+                  Reset
+                </button>
+              )}
+            </div>
+            <span className="sim-hint">Separate multi-char symbols with commas or spaces</span>
+          </div>
+        )}
+
+        {/* Batch input */}
+        {batchMode && (
+          <div className="sim-input-group">
+            <label className="panel-label">Words (one per line)</label>
+            <textarea
+              className="panel-input sim-batch-input"
+              value={batchInput}
+              onChange={(e) => setBatchInput(e.target.value)}
+              placeholder={'aba\na,b,b\nbb\n(empty line = \u03B5)'}
+              rows={6}
+              disabled={!!batchResults}
+            />
+            <div className="sim-input-row">
+              {!batchResults ? (
+                <button className="sim-btn sim-btn-primary" style={{ flex: 1 }} onClick={runBatch}>
+                  Run All
+                </button>
+              ) : (
+                <button className="sim-btn sim-btn-secondary" style={{ flex: 1 }} onClick={clearBatchResults}>
+                  Clear Results
+                </button>
+              )}
+            </div>
+            <span className="sim-hint">Same format as single mode: commas, spaces, or char-by-char</span>
+          </div>
+        )}
       </div>
 
       {/* Validation messages */}
@@ -80,8 +133,27 @@ export function SimulationPanel() {
         </div>
       )}
 
-      {/* Trace controls */}
-      {trace && (
+      {/* Batch results */}
+      {batchMode && batchResults && (
+        <div className="panel-section">
+          <h3 className="panel-title">
+            Results ({batchResults.filter((r) => r.status === 'accepted').length}/{batchResults.length} accepted)
+          </h3>
+          <div className="sim-batch-results">
+            {batchResults.map((result, i) => (
+              <div key={i} className={`sim-batch-row sim-batch-row-${result.status}`}>
+                <span className="sim-batch-word">{result.wordDisplay}</span>
+                <span className={`sim-batch-badge sim-batch-badge-${result.status}`}>
+                  {result.status === 'accepted' ? '\u2714' : '\u2716'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trace controls (single mode only) */}
+      {!batchMode && trace && (
         <>
           <div className="panel-section">
             <h3 className="panel-title">Step {currentStep} / {trace.snapshots.length - 1}</h3>

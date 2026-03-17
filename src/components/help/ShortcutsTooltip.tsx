@@ -28,6 +28,8 @@ const instructions = [
   'Drag states to move them — they snap to alignment with other states.',
   'Scroll to zoom, drag empty canvas to pan.',
   'Select an element and press Delete to remove it.',
+  'Click Simulate to enter simulation mode. Run auto-plays the trace.',
+  'Switch to Batch mode to test multiple words at once.',
 ];
 
 export function ShortcutsTooltip() {

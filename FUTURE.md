@@ -14,6 +14,9 @@ Deferred from Phase 2 — implement after word simulation is working.
 - Inline CSS variables, serialize to canvas at 2x resolution, export as PNG
 - Web Share API support (fallback to file download via file-saver)
 
+## UX Improvements
+- Show help popup automatically on first visit to the site (localStorage flag)
+
 ## Other Ideas
 - Tab support for multiple automata
 - NFA to DFA conversion (subset construction)

@@ -218,3 +218,96 @@
   width: 100%;
   accent-color: var(--color-primary);
 }
+
+/* Mode toggle */
+.sim-mode-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sim-mode-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-family: var(--font-family);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sim-mode-btn:not(:last-child) {
+  border-right: 1px solid var(--color-border);
+}
+
+.sim-mode-btn-active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.sim-mode-btn:hover:not(.sim-mode-btn-active) {
+  background: var(--color-bg);
+}
+
+/* Batch input */
+.sim-batch-input {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+/* Batch results */
+.sim-batch-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.sim-batch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.sim-batch-row-accepted {
+  background: #ecfdf5;
+}
+
+.sim-batch-row-rejected {
+  background: #fef2f2;
+}
+
+.sim-batch-word {
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.sim-batch-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.sim-batch-badge-accepted {
+  color: #059669;
+}
+
+.sim-batch-badge-rejected {
+  color: #dc2626;
+}

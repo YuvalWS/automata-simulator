@@ -5,7 +5,8 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 ## Features
 
 - **Interactive diagram editor** — drag states to reposition, scroll to zoom, drag canvas to pan
-- **Word simulation** — step-by-step DFA/NFA simulation with visual state/transition highlighting
+- **Word simulation** — step-by-step DFA/NFA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
+- **Batch simulation** — test multiple words at once, see accept/reject results for each
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA & NFA support** — toggle between deterministic and nondeterministic modes
@@ -41,10 +42,10 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 ## Simulation
 
 1. Click **Simulate** in the toolbar (or build your automaton first)
-2. Enter a word (e.g., `a,b,a` or `aba`) and click **Run**
-3. Use step controls or keyboard shortcuts to step through the trace
+2. Enter a word (e.g., `a,b,a` or `aba`) and click **Run** — the animation auto-plays and shows the final accept/reject result
+3. Use step controls or keyboard shortcuts to replay the trace
 4. Active states glow green; traversed transitions are highlighted
-5. Status badge shows Running/Accepted/Rejected
+5. Switch to **Batch** mode to test multiple words at once (one per line)
 6. Press **Escape** or click **Exit Sim** to return to editing
 
 ## Keyboard Shortcuts
@@ -109,7 +110,7 @@ src/
 ├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment
 tests/
-├── unit/          # 174 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 183 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -122,5 +123,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (174 unit tests)
+- Vitest for tests (183 unit tests)
 - Docker + Express for deployment

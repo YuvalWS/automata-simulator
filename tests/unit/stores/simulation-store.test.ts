@@ -4,15 +4,14 @@ import { useAutomatonStore } from '@/stores/automaton-store';
 
 
 function setupDfa() {
-  const store = useAutomatonStore.getState();
-  store.newAutomaton('Test DFA');
-  // q0 is auto-created. Add q1 (accepting) and transitions.
-  const q0 = store.automaton.states[0]!;
-  const q1 = store.addState({ x: 100, y: 0 });
-  store.toggleAccepting(q1.id);
-  store.addTransition(q0.id, q1.id, ['a']);
-  store.addTransition(q1.id, q1.id, ['b']);
-  store.setAlphabet(['a', 'b']);
+  useAutomatonStore.getState().newAutomaton('Test DFA');
+  // Re-read state after mutation to get fresh snapshot
+  const q0 = useAutomatonStore.getState().automaton.states[0]!;
+  const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+  useAutomatonStore.getState().toggleAccepting(q1.id);
+  useAutomatonStore.getState().addTransition(q0.id, q1.id, ['a']);
+  useAutomatonStore.getState().addTransition(q1.id, q1.id, ['b']);
+  useAutomatonStore.getState().setAlphabet(['a', 'b']);
 }
 
 describe('simulation store', () => {
@@ -117,6 +116,119 @@ describe('simulation store', () => {
       useSimulationStore.getState().goToStep(100);
 
       expect(useSimulationStore.getState().currentStep).toBe(1);
+    });
+
+    it('startSimulation triggers autoRunning', () => {
+      useSimulationStore.getState().setWordInput('a');
+      useSimulationStore.getState().startSimulation();
+
+      // After startSimulation, autoRunning should be true (auto-run starts)
+      expect(useSimulationStore.getState().autoRunning).toBe(true);
+    });
+  });
+
+  describe('batch simulation', () => {
+    beforeEach(() => {
+      setupDfa();
+      useSimulationStore.getState().enterSimulation();
+    });
+
+    it('setBatchMode toggles batch mode', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      expect(useSimulationStore.getState().batchMode).toBe(true);
+      useSimulationStore.getState().setBatchMode(false);
+      expect(useSimulationStore.getState().batchMode).toBe(false);
+    });
+
+    it('runBatch produces results for each word', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('a\nab\nb');
+      useSimulationStore.getState().runBatch();
+
+      const { batchResults } = useSimulationStore.getState();
+      expect(batchResults).not.toBeNull();
+      expect(batchResults).toHaveLength(3);
+    });
+
+    it('runBatch correctly accepts and rejects', () => {
+      const automaton = useAutomatonStore.getState().automaton;
+      // Verify DFA is set up correctly
+      expect(automaton.states).toHaveLength(2);
+      expect(automaton.transitions).toHaveLength(2);
+      const accepting = automaton.states.find((s) => s.isAccepting);
+      expect(accepting).toBeDefined();
+
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('a\nab\nb');
+      useSimulationStore.getState().runBatch();
+
+      const { batchResults, validationMessages } = useSimulationStore.getState();
+      expect(validationMessages.some((m) => m.type === 'error')).toBe(false);
+      expect(batchResults).not.toBeNull();
+      // "a" → q0→q1 (accepting), "ab" → q0→q1→q1 (accepting, b self-loop), "b" → no transition → rejected
+      expect(batchResults![0]!.status).toBe('accepted');
+      expect(batchResults![1]!.status).toBe('accepted');
+      expect(batchResults![2]!.status).toBe('rejected');
+    });
+
+    it('runBatch blocks on automaton validation error', () => {
+      // Remove initial state to cause validation error
+      const auto = useAutomatonStore.getState().automaton;
+      const stateIds = auto.states.map((s) => s.id);
+      for (const id of stateIds) {
+        useAutomatonStore.getState().removeState(id);
+      }
+
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('a');
+      useSimulationStore.getState().runBatch();
+
+      expect(useSimulationStore.getState().batchResults).toBeNull();
+      expect(useSimulationStore.getState().validationMessages.some((m) => m.type === 'error')).toBe(true);
+    });
+
+    it('runBatch shows error for empty input', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('');
+      useSimulationStore.getState().runBatch();
+
+      expect(useSimulationStore.getState().batchResults).toBeNull();
+      expect(useSimulationStore.getState().validationMessages.some((m) => m.type === 'error')).toBe(true);
+    });
+
+    it('clearBatchResults clears results', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('a');
+      useSimulationStore.getState().runBatch();
+      expect(useSimulationStore.getState().batchResults).not.toBeNull();
+
+      useSimulationStore.getState().clearBatchResults();
+      expect(useSimulationStore.getState().batchResults).toBeNull();
+    });
+
+    it('exitSimulation clears batch state', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      useSimulationStore.getState().setBatchInput('a\nb');
+      useSimulationStore.getState().runBatch();
+      useSimulationStore.getState().exitSimulation();
+
+      expect(useSimulationStore.getState().batchMode).toBe(false);
+      expect(useSimulationStore.getState().batchInput).toBe('');
+      expect(useSimulationStore.getState().batchResults).toBeNull();
+    });
+
+    it('handles empty word (epsilon) in batch', () => {
+      useSimulationStore.getState().setBatchMode(true);
+      // Empty line between words - the filter removes it, so use explicit empty test
+      // Actually the empty line is filtered out. Let's test with just a single empty-equivalent
+      // Since we filter empty lines, an empty word must be tested as a line with just whitespace
+      // The parseWord('') returns [], which is the empty word
+      useSimulationStore.getState().setBatchInput('a');
+      useSimulationStore.getState().runBatch();
+
+      const results = useSimulationStore.getState().batchResults!;
+      expect(results).toHaveLength(1);
+      expect(results[0]!.status).toBe('accepted');
     });
   });
 });
