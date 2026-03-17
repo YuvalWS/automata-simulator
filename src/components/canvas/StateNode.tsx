@@ -37,15 +37,15 @@ export function StateNode({
   let strokeWidth = 2;
 
   if (simulationStatus === 'active') {
-    fillColor = '#ecfdf5';
+    fillColor = 'var(--color-sim-active-fill)';
     strokeColor = 'var(--color-accent)';
     strokeWidth = 3;
   } else if (simulationStatus === 'accepted') {
-    fillColor = '#dcfce7';
-    strokeColor = '#059669';
+    fillColor = 'var(--color-sim-accepted-fill)';
+    strokeColor = 'var(--color-sim-accepted-stroke)';
     strokeWidth = 3;
   } else if (simulationStatus === 'rejected') {
-    fillColor = '#fef2f2';
+    fillColor = 'var(--color-sim-rejected-fill)';
     strokeColor = 'var(--color-danger)';
     strokeWidth = 3;
   } else if (isPendingSource) {

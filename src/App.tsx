@@ -6,12 +6,14 @@ import { ShortcutsTooltip } from './components/help/ShortcutsTooltip';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { useAutosave } from './hooks/use-autosave';
 import { useUnsavedWarning } from './hooks/use-unsaved-warning';
+import { useTheme } from './hooks/use-theme';
 import { useSimulationStore } from './stores/simulation-store';
 
 export default function App() {
   useKeyboardShortcuts();
   useAutosave();
   useUnsavedWarning();
+  useTheme();
 
   const isSimulating = useSimulationStore((s) => s.isActive);
 

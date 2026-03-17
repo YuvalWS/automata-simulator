@@ -102,7 +102,7 @@
 }
 
 .sim-msg-warning {
-  color: #d97706;
+  color: var(--color-warning);
 }
 
 /* Word display */
@@ -151,21 +151,21 @@
 }
 
 .sim-status-running {
-  background: #eff6ff;
+  background: var(--color-sim-status-running-bg);
   color: var(--color-primary);
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-sim-status-running-border);
 }
 
 .sim-status-accepted {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background: var(--color-sim-status-accepted-bg);
+  color: var(--color-batch-accepted-text);
+  border: 1px solid var(--color-sim-status-accepted-border);
 }
 
 .sim-status-rejected {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--color-sim-status-rejected-bg);
+  color: var(--color-batch-rejected-text);
+  border: 1px solid var(--color-sim-status-rejected-border);
 }
 
 /* Active states display */
@@ -292,11 +292,11 @@
 }
 
 .sim-batch-row-accepted {
-  background: #ecfdf5;
+  background: var(--color-batch-accepted-bg);
 }
 
 .sim-batch-row-rejected {
-  background: #fef2f2;
+  background: var(--color-batch-rejected-bg);
 }
 
 .sim-batch-word {
@@ -312,9 +312,9 @@
 }
 
 .sim-batch-badge-accepted {
-  color: #059669;
+  color: var(--color-batch-accepted-text);
 }
 
 .sim-batch-badge-rejected {
-  color: #dc2626;
+  color: var(--color-batch-rejected-text);
 }

@@ -78,14 +78,19 @@
 .toolbar-simulate {
   padding: 5px 14px;
   font-weight: 600;
-  background: #059669;
+  background: var(--color-accent);
   color: white;
-  border-color: #059669;
+  border-color: var(--color-accent);
 }
 
 .toolbar-simulate:hover:not(:disabled) {
   background: #047857;
   border-color: #047857;
+}
+
+.toolbar-theme-btn {
+  font-size: 18px;
+  padding: 4px 8px;
 }
 
 .toolbar-simulate-active {

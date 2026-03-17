@@ -55,12 +55,12 @@
 /* Simulation state highlights */
 .state-node--sim-active > circle:first-of-type {
   stroke: var(--color-accent);
-  fill: #ecfdf5;
+  fill: var(--color-sim-active-fill);
 }
 
 .state-node--sim-rejected > circle:first-of-type {
   stroke: var(--color-danger);
-  fill: #fef2f2;
+  fill: var(--color-sim-rejected-fill);
 }
 
 .transition-edge--sim-active path:nth-of-type(2) {

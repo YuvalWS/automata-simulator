@@ -4,6 +4,7 @@ import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
 import { clearAutosave } from '@/hooks/use-autosave';
+import { useTheme } from '@/hooks/use-theme';
 import { computeFitViewport } from '@/utils/fit-viewport';
 import './Toolbar.css';
 
@@ -22,6 +23,7 @@ export function Toolbar() {
   const simIsActive = useSimulationStore((s) => s.isActive);
   const enterSimulation = useSimulationStore((s) => s.enterSimulation);
   const exitSimulation = useSimulationStore((s) => s.exitSimulation);
+  const { theme, toggleTheme } = useTheme();
 
   const { panX, panY, zoom } = automaton.viewport;
 
@@ -145,6 +147,9 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar-group toolbar-info">
+        <button className="toolbar-btn toolbar-theme-btn" onClick={toggleTheme} title="Toggle dark/light mode">
+          {theme === 'light' ? '\u263E' : '\u2600'}
+        </button>
         <span className="automaton-type-badge">{automaton.type}</span>
         <span className="automaton-name">{automaton.name}</span>
       </div>
