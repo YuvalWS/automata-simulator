@@ -4,6 +4,7 @@ import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
 import { clearAutosave } from '@/hooks/use-autosave';
+import { computeFitViewport } from '@/utils/fit-viewport';
 import './Toolbar.css';
 
 export function Toolbar() {
@@ -44,6 +45,13 @@ export function Toolbar() {
       setAutomaton(loaded);
       setDirty(false);
     }
+  };
+
+  const handleFitToContent = () => {
+    const svg = document.querySelector('.automata-canvas');
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    setViewport(computeFitViewport(automaton.states, rect.width, rect.height));
   };
 
   const handleZoom = (factor: number) => {
@@ -125,6 +133,14 @@ export function Toolbar() {
         </span>
         <button className="toolbar-btn toolbar-zoom-btn" onClick={() => handleZoom(1.25)} title="Zoom In">
           +
+        </button>
+        <button
+          className="toolbar-btn toolbar-zoom-btn"
+          onClick={handleFitToContent}
+          disabled={automaton.states.length === 0}
+          title="Fit to Content"
+        >
+          Fit
         </button>
       </div>
 
