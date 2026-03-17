@@ -1,5 +1,6 @@
 import type { Automaton } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
+import { EPSILON } from '@/models/epsilon';
 
 export interface ValidationMessage {
   type: 'error' | 'warning';
@@ -19,12 +20,19 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
   }
 
   if (automaton.type === AutomatonType.DFA) {
+    // Warn if DFA has epsilon transitions
+    const hasEpsilon = automaton.transitions.some((t) => t.symbols.includes(EPSILON));
+    if (hasEpsilon) {
+      messages.push({ type: 'warning', message: 'DFA should not have \u03B5-transitions.' });
+    }
+
     // Check for symbol conflicts: multiple transitions from same state on same symbol
     for (const state of automaton.states) {
       const symbolMap = new Map<string, number>();
       for (const t of automaton.transitions) {
         if (t.sourceId !== state.id) continue;
         for (const sym of t.symbols) {
+          if (sym === EPSILON) continue;
           symbolMap.set(sym, (symbolMap.get(sym) ?? 0) + 1);
         }
       }
@@ -40,6 +48,7 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
       // Check for missing transitions (only if alphabet is defined)
       if (automaton.alphabet.length > 0) {
         for (const sym of automaton.alphabet) {
+          if (sym === EPSILON) continue;
           if (!symbolMap.has(sym)) {
             messages.push({
               type: 'warning',

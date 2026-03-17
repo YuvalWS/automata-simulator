@@ -98,6 +98,43 @@ describe('validateAutomaton', () => {
     const msgs = validateAutomaton(auto);
     expect(msgs.some((m) => m.type === 'error' && m.message.includes('DFA conflict') && m.message.includes('"a"'))).toBe(true);
   });
+
+  it('warns when DFA has epsilon transitions', () => {
+    const auto = makeAutomaton({
+      type: AutomatonType.DFA,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['\u03B5'] },
+      ],
+    });
+    const msgs = validateAutomaton(auto);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('\u03B5-transitions'))).toBe(true);
+  });
+
+  it('does not warn about epsilon for NFA', () => {
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['\u03B5'] },
+      ],
+    });
+    const msgs = validateAutomaton(auto);
+    expect(msgs.some((m) => m.message.includes('\u03B5-transitions'))).toBe(false);
+  });
+
+  it('does not count epsilon as missing transition in DFA', () => {
+    const auto = makeAutomaton({
+      type: AutomatonType.DFA,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q0', targetId: 'q0', symbols: ['b'] },
+        { id: 't3', sourceId: 'q1', targetId: 'q1', symbols: ['a'] },
+        { id: 't4', sourceId: 'q1', targetId: 'q0', symbols: ['b'] },
+      ],
+    });
+    const msgs = validateAutomaton(auto);
+    // No warnings about missing ε transition
+    expect(msgs.some((m) => m.message.includes('\u03B5'))).toBe(false);
+  });
 });
 
 describe('validateWord', () => {

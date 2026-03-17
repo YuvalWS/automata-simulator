@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { EPSILON } from '@/models/epsilon';
 import './TransitionSymbolModal.css';
 
 interface TransitionSymbolModalProps {
@@ -48,16 +49,26 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
         <div className="symbol-modal-title">
           {initialSymbols ? 'Edit Transition Symbols' : 'Enter Transition Symbols'}
         </div>
-        <input
-          ref={inputRef}
-          type="text"
-          className="symbol-modal-input"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="a, b, c"
-        />
-        <div className="symbol-modal-hint">Comma-separated. Press Enter to confirm, Esc to cancel.</div>
+        <div className="symbol-modal-input-row">
+          <input
+            ref={inputRef}
+            type="text"
+            className="symbol-modal-input"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="a, b, \u03B5"
+          />
+          <button
+            type="button"
+            className="symbol-modal-btn epsilon"
+            onClick={() => setValue((v) => v.trim() ? `${v}, ${EPSILON}` : EPSILON)}
+            title="Add epsilon (\u03B5) transition"
+          >
+            {'\u03B5'}
+          </button>
+        </div>
+        <div className="symbol-modal-hint">Comma-separated. Use \u03B5 for epsilon transitions. Enter to confirm.</div>
         <div className="symbol-modal-actions">
           <button className="symbol-modal-btn cancel" onClick={onCancel}>Cancel</button>
           <button className="symbol-modal-btn confirm" onClick={handleSubmit}>Confirm</button>
