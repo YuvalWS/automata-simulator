@@ -60,6 +60,7 @@ export function AutomataCanvas() {
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
+  const [handleHover, setHandleHover] = useState<{ stateId: string; angle: number } | null>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
@@ -159,14 +160,19 @@ export function AutomataCanvas() {
         return;
       }
 
-      // Show "+" hint when hovering over empty canvas space
+      // Show "+" hint when hovering over empty canvas space, and compute handle angle for nearby states
       const svgPoint = getSvgPoint(e.clientX, e.clientY);
-      const overState = automaton.states.some((s) => {
-        const dx = s.position.x - svgPoint.x;
-        const dy = s.position.y - svgPoint.y;
-        return Math.sqrt(dx * dx + dy * dy) <= 40;
-      });
-      setHoverPoint(overState ? null : svgPoint);
+      let nearestState: { id: string; dist: number; angle: number } | null = null;
+      for (const s of automaton.states) {
+        const dx = svgPoint.x - s.position.x;
+        const dy = svgPoint.y - s.position.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= 60 && (!nearestState || dist < nearestState.dist)) {
+          nearestState = { id: s.id, dist, angle: Math.atan2(dy, dx) };
+        }
+      }
+      setHandleHover(nearestState ? { stateId: nearestState.id, angle: nearestState.angle } : null);
+      setHoverPoint(nearestState ? null : svgPoint);
     },
     [isPanning, simIsActive, dragState, drawingTransition, getSvgPoint, setViewport, updateState, updateDrawingTransition, zoom, automaton.states],
   );
@@ -487,6 +493,7 @@ export function AutomataCanvas() {
               isSelected={selection?.type === 'state' && selection.id === state.id}
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
+              handleAngle={handleHover?.stateId === state.id ? handleHover.angle : undefined}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
