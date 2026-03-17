@@ -7,14 +7,22 @@ describe('automaton store', () => {
     useAutomatonStore.getState().newAutomaton('Test');
   });
 
+  it('new automaton starts with default q0 state', () => {
+    const { states } = useAutomatonStore.getState().automaton;
+    expect(states).toHaveLength(1);
+    expect(states[0]!.name).toBe('q0');
+    expect(states[0]!.isInitial).toBe(true);
+    expect(states[0]!.isAccepting).toBe(false);
+  });
+
   describe('addState', () => {
     it('adds a state at given position', () => {
       const state = useAutomatonStore.getState().addState({ x: 100, y: 200 });
       const { states } = useAutomatonStore.getState().automaton;
 
-      expect(states).toHaveLength(1);
-      expect(states[0]!.position).toEqual({ x: 100, y: 200 });
-      expect(state.name).toBe('q0');
+      expect(states).toHaveLength(2); // q0 + new state
+      expect(state.position).toEqual({ x: 100, y: 200 });
+      expect(state.name).toBe('q1'); // q0 already exists
     });
 
     it('auto-names states sequentially', () => {
@@ -22,23 +30,14 @@ describe('automaton store', () => {
       useAutomatonStore.getState().addState({ x: 100, y: 0 });
       const { states } = useAutomatonStore.getState().automaton;
 
-      expect(states[0]!.name).toBe('q0');
+      expect(states[0]!.name).toBe('q0'); // default
       expect(states[1]!.name).toBe('q1');
+      expect(states[2]!.name).toBe('q2');
     });
 
-    it('first state is automatically initial', () => {
-      useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      const { states } = useAutomatonStore.getState().automaton;
-
-      expect(states[0]!.isInitial).toBe(true);
-    });
-
-    it('subsequent states are not initial', () => {
-      useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      useAutomatonStore.getState().addState({ x: 100, y: 0 });
-      const { states } = useAutomatonStore.getState().automaton;
-
-      expect(states[1]!.isInitial).toBe(false);
+    it('default q0 is initial, added states are not', () => {
+      const state = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      expect(state.isInitial).toBe(false);
     });
   });
 
@@ -48,15 +47,15 @@ describe('automaton store', () => {
       useAutomatonStore.getState().removeState(state.id);
       const { states } = useAutomatonStore.getState().automaton;
 
-      expect(states).toHaveLength(0);
+      expect(states).toHaveLength(1); // only q0 remains
     });
 
     it('removes connected transitions when state is removed', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
       const s2 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
-      useAutomatonStore.getState().addTransition(s1.id, s2.id, ['a']);
+      useAutomatonStore.getState().addTransition(q0.id, s2.id, ['a']);
 
-      useAutomatonStore.getState().removeState(s1.id);
+      useAutomatonStore.getState().removeState(s2.id);
       const { transitions } = useAutomatonStore.getState().automaton;
 
       expect(transitions).toHaveLength(0);
@@ -65,17 +64,17 @@ describe('automaton store', () => {
 
   describe('updateState', () => {
     it('updates state name', () => {
-      const state = useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      useAutomatonStore.getState().updateState(state.id, { name: 'start' });
-      const updated = useAutomatonStore.getState().automaton.states[0];
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      useAutomatonStore.getState().updateState(q0.id, { name: 'start' });
+      const updated = useAutomatonStore.getState().automaton.states.find((s) => s.id === q0.id);
 
       expect(updated!.name).toBe('start');
     });
 
     it('updates state position', () => {
-      const state = useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      useAutomatonStore.getState().updateState(state.id, { position: { x: 50, y: 75 } });
-      const updated = useAutomatonStore.getState().automaton.states[0];
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      useAutomatonStore.getState().updateState(q0.id, { position: { x: 50, y: 75 } });
+      const updated = useAutomatonStore.getState().automaton.states.find((s) => s.id === q0.id);
 
       expect(updated!.position).toEqual({ x: 50, y: 75 });
     });
@@ -83,35 +82,35 @@ describe('automaton store', () => {
 
   describe('setInitialState', () => {
     it('makes a state initial and clears others', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
       const s2 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
 
       useAutomatonStore.getState().setInitialState(s2.id);
       const { states } = useAutomatonStore.getState().automaton;
 
-      expect(states.find((s) => s.id === s1.id)!.isInitial).toBe(false);
+      expect(states.find((s) => s.id === q0.id)!.isInitial).toBe(false);
       expect(states.find((s) => s.id === s2.id)!.isInitial).toBe(true);
     });
   });
 
   describe('toggleAccepting', () => {
     it('toggles accepting state', () => {
-      const state = useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      expect(useAutomatonStore.getState().automaton.states[0]!.isAccepting).toBe(false);
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      expect(q0.isAccepting).toBe(false);
 
-      useAutomatonStore.getState().toggleAccepting(state.id);
-      expect(useAutomatonStore.getState().automaton.states[0]!.isAccepting).toBe(true);
+      useAutomatonStore.getState().toggleAccepting(q0.id);
+      expect(useAutomatonStore.getState().automaton.states.find((s) => s.id === q0.id)!.isAccepting).toBe(true);
 
-      useAutomatonStore.getState().toggleAccepting(state.id);
-      expect(useAutomatonStore.getState().automaton.states[0]!.isAccepting).toBe(false);
+      useAutomatonStore.getState().toggleAccepting(q0.id);
+      expect(useAutomatonStore.getState().automaton.states.find((s) => s.id === q0.id)!.isAccepting).toBe(false);
     });
   });
 
   describe('addTransition', () => {
     it('adds a transition between states', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
       const s2 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
-      useAutomatonStore.getState().addTransition(s1.id, s2.id, ['a']);
+      useAutomatonStore.getState().addTransition(q0.id, s2.id, ['a']);
 
       const { transitions } = useAutomatonStore.getState().automaton;
       expect(transitions).toHaveLength(1);
@@ -119,10 +118,10 @@ describe('automaton store', () => {
     });
 
     it('merges symbols for duplicate source-target pair', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
       const s2 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
-      useAutomatonStore.getState().addTransition(s1.id, s2.id, ['a']);
-      useAutomatonStore.getState().addTransition(s1.id, s2.id, ['b']);
+      useAutomatonStore.getState().addTransition(q0.id, s2.id, ['a']);
+      useAutomatonStore.getState().addTransition(q0.id, s2.id, ['b']);
 
       const { transitions } = useAutomatonStore.getState().automaton;
       expect(transitions).toHaveLength(1);
@@ -131,8 +130,8 @@ describe('automaton store', () => {
     });
 
     it('allows self-loops', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
-      useAutomatonStore.getState().addTransition(s1.id, s1.id, ['a']);
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      useAutomatonStore.getState().addTransition(q0.id, q0.id, ['a']);
 
       const { transitions } = useAutomatonStore.getState().automaton;
       expect(transitions).toHaveLength(1);
@@ -142,9 +141,9 @@ describe('automaton store', () => {
 
   describe('removeTransition', () => {
     it('removes a transition', () => {
-      const s1 = useAutomatonStore.getState().addState({ x: 0, y: 0 });
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
       const s2 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
-      const t = useAutomatonStore.getState().addTransition(s1.id, s2.id, ['a']);
+      const t = useAutomatonStore.getState().addTransition(q0.id, s2.id, ['a']);
 
       useAutomatonStore.getState().removeTransition(t.id);
       expect(useAutomatonStore.getState().automaton.transitions).toHaveLength(0);

@@ -4,12 +4,19 @@ import './ShortcutsTooltip.css';
 const shortcuts = [
   { key: 'N', action: 'New State (click canvas to place)' },
   { key: 'Delete', action: 'Delete selected element' },
-  { key: 'Escape', action: 'Cancel current action' },
+  { key: 'Escape', action: 'Cancel / Exit simulation' },
   { key: 'Ctrl+Z', action: 'Undo' },
   { key: 'Ctrl+Shift+Z', action: 'Redo' },
   { key: 'Ctrl+S', action: 'Save to file' },
   { key: 'Ctrl+O', action: 'Load from file' },
   { key: 'Ctrl+N', action: 'New automaton' },
+];
+
+const simShortcuts = [
+  { key: 'Space', action: 'Step forward / Run' },
+  { key: 'Enter', action: 'Toggle auto-run' },
+  { key: '\u2190 / \u2192', action: 'Step backward / forward' },
+  { key: 'Escape', action: 'Exit simulation' },
 ];
 
 const instructions = [
@@ -35,6 +42,19 @@ export function ShortcutsTooltip() {
             <table className="shortcuts-table">
               <tbody>
                 {shortcuts.map((s) => (
+                  <tr key={s.key}>
+                    <td className="shortcut-key"><kbd>{s.key}</kbd></td>
+                    <td className="shortcut-action">{s.action}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="shortcuts-section">
+            <h4 className="shortcuts-heading">During Simulation</h4>
+            <table className="shortcuts-table">
+              <tbody>
+                {simShortcuts.map((s) => (
                   <tr key={s.key}>
                     <td className="shortcut-key"><kbd>{s.key}</kbd></td>
                     <td className="shortcut-action">{s.action}</td>

@@ -43,7 +43,7 @@ export function pointOnCircle(center: Point, radius: number, angleRad: number): 
   };
 }
 
-export function circleIntersection(from: Point, to: Point, center: Point, radius: number): Point {
+export function circleIntersection(from: Point, _to: Point, center: Point, radius: number): Point {
   const a = angle(center, from);
   return pointOnCircle(center, radius, a);
 }

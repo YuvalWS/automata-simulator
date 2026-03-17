@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
-import { EditorTool } from '@/models/types';
+import { useSimulationStore } from '@/stores/simulation-store';
 import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
 import { clearAutosave } from './use-autosave';
 
@@ -27,8 +27,57 @@ export function useKeyboardShortcuts() {
       }
 
       const ctrl = e.ctrlKey || e.metaKey;
+      const simState = useSimulationStore.getState();
 
-      // Ctrl/Cmd shortcuts
+      // Escape always works — exits simulation or clears selection
+      if (e.key === 'Escape') {
+        if (simState.isActive) {
+          simState.exitSimulation();
+        } else {
+          clearSelection();
+          useEditorStore.getState().stopPlacingState();
+          useEditorStore.getState().setPendingTransitionSource(null);
+        }
+        return;
+      }
+
+      // Simulation-mode shortcuts
+      if (simState.isActive) {
+        switch (e.key) {
+          case ' ':
+            e.preventDefault();
+            if (simState.trace) {
+              simState.stepForward();
+            } else {
+              simState.startSimulation();
+            }
+            return;
+          case 'Enter':
+            e.preventDefault();
+            if (simState.trace) {
+              if (simState.autoRunning) {
+                simState.stopAutoRun();
+              } else {
+                simState.startAutoRun();
+              }
+            } else {
+              simState.startSimulation();
+            }
+            return;
+          case 'ArrowRight':
+            e.preventDefault();
+            simState.stepForward();
+            return;
+          case 'ArrowLeft':
+            e.preventDefault();
+            simState.stepBackward();
+            return;
+        }
+        // Block all other shortcuts during simulation
+        return;
+      }
+
+      // Ctrl/Cmd shortcuts (editing mode only)
       if (ctrl) {
         switch (e.key.toLowerCase()) {
           case 'z':
@@ -70,15 +119,10 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Non-modifier shortcuts
+      // Non-modifier shortcuts (editing mode only)
       switch (e.key.toLowerCase()) {
         case 'n':
           startPlacingState();
-          break;
-        case 'escape':
-          clearSelection();
-          useEditorStore.getState().stopPlacingState();
-          useEditorStore.getState().setPendingTransitionSource(null);
           break;
         case 'delete':
         case 'backspace':

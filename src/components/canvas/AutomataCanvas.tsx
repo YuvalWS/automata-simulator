@@ -1,8 +1,10 @@
 import { useRef, useCallback, useState } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useEditorStore } from '@/stores/editor-store';
+import { useSimulationStore } from '@/stores/simulation-store';
 import { computeEdgePaths } from '@/services/layout/edge-routing';
 import { StateNode } from './StateNode';
+import type { SimulationStatus } from './StateNode';
 import { TransitionEdge } from './TransitionEdge';
 import { InitialArrow } from './InitialArrow';
 import { GhostEdge } from './GhostEdge';
@@ -27,7 +29,6 @@ export function AutomataCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const automaton = useAutomatonStore((s) => s.automaton);
   const addState = useAutomatonStore((s) => s.addState);
-  const removeTransition = useAutomatonStore((s) => s.removeTransition);
   const updateState = useAutomatonStore((s) => s.updateState);
   const addTransition = useAutomatonStore((s) => s.addTransition);
   const updateTransition = useAutomatonStore((s) => s.updateTransition);
@@ -45,11 +46,17 @@ export function AutomataCanvas() {
   const pendingTransitionSource = useEditorStore((s) => s.pendingTransitionSource);
   const setPendingTransitionSource = useEditorStore((s) => s.setPendingTransitionSource);
 
+  const simIsActive = useSimulationStore((s) => s.isActive);
+  const simTrace = useSimulationStore((s) => s.trace);
+  const simCurrentStep = useSimulationStore((s) => s.currentStep);
+  const simSnapshot = simTrace ? (simTrace.snapshots[simCurrentStep] ?? null) : null;
+
   const { panX, panY, zoom } = automaton.viewport;
   const [isPanning, setIsPanning] = useState(false);
   const [dragState, setDragState] = useState<{ id: string; offset: { x: number; y: number } } | null>(null);
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
+  const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -82,6 +89,17 @@ export function AutomataCanvas() {
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
 
+      // During simulation, only allow panning
+      if (simIsActive) {
+        const target = e.target as SVGElement;
+        const isCanvas = target === svgRef.current || target.tagName === 'rect';
+        if (isCanvas) {
+          setIsPanning(true);
+          panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
+        }
+        return;
+      }
+
       const target = e.target as SVGElement;
       const isCanvas = target === svgRef.current || target.tagName === 'rect';
 
@@ -99,7 +117,7 @@ export function AutomataCanvas() {
         panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
       }
     },
-    [placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, panX, panY],
+    [simIsActive, placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, panX, panY],
   );
 
   const handleMouseMove = useCallback(
@@ -114,6 +132,9 @@ export function AutomataCanvas() {
         });
         return;
       }
+
+      // During simulation, no editing interactions
+      if (simIsActive) return;
 
       if (dragState) {
         const point = getSvgPoint(e.clientX, e.clientY);
@@ -130,9 +151,19 @@ export function AutomataCanvas() {
       if (drawingTransition) {
         const point = getSvgPoint(e.clientX, e.clientY);
         updateDrawingTransition(point);
+        return;
       }
+
+      // Show "+" hint when hovering over empty canvas space
+      const svgPoint = getSvgPoint(e.clientX, e.clientY);
+      const overState = automaton.states.some((s) => {
+        const dx = s.position.x - svgPoint.x;
+        const dy = s.position.y - svgPoint.y;
+        return Math.sqrt(dx * dx + dy * dy) <= 40;
+      });
+      setHoverPoint(overState ? null : svgPoint);
     },
-    [isPanning, dragState, drawingTransition, getSvgPoint, setViewport, updateState, updateDrawingTransition, zoom, automaton.states],
+    [isPanning, simIsActive, dragState, drawingTransition, getSvgPoint, setViewport, updateState, updateDrawingTransition, zoom, automaton.states],
   );
 
   const handleMouseUp = useCallback(
@@ -141,6 +172,8 @@ export function AutomataCanvas() {
         setIsPanning(false);
         return;
       }
+
+      if (simIsActive) return;
 
       if (dragState) {
         setDragState(null);
@@ -161,7 +194,7 @@ export function AutomataCanvas() {
         return;
       }
     },
-    [isPanning, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition],
+    [isPanning, simIsActive, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition],
   );
 
   const handleWheel = useCallback(
@@ -187,10 +220,10 @@ export function AutomataCanvas() {
 
   const handleStateMouseDown = useCallback(
     (e: React.MouseEvent, stateId: string) => {
+      if (simIsActive) return;
       e.stopPropagation();
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
 
-      // Select + start drag
       setSelection({ type: 'state', id: stateId });
       const state = automaton.states.find((s) => s.id === stateId);
       if (state) {
@@ -204,12 +237,12 @@ export function AutomataCanvas() {
         });
       }
     },
-    [automaton.states, getSvgPoint, setSelection],
+    [simIsActive, automaton.states, getSvgPoint, setSelection],
   );
 
   const handleStateMouseUp = useCallback(
     (e: React.MouseEvent, stateId: string) => {
-      // Only trigger click-to-click transition if this was a click (not a drag)
+      if (simIsActive) return;
       if (!mouseDownPos.current) return;
       const dx = e.clientX - mouseDownPos.current.x;
       const dy = e.clientY - mouseDownPos.current.y;
@@ -218,11 +251,9 @@ export function AutomataCanvas() {
 
       if (wasDrag) return;
 
-      // Check if there's a pending transition source from a previous click
       const pending = pendingTransitionSource;
       const now = Date.now();
       if (pending && pending.stateId !== stateId && now - pending.timestamp < PENDING_TIMEOUT_MS) {
-        // Create transition from pending source to this state
         setSymbolModal({
           sourceId: pending.stateId,
           targetId: stateId,
@@ -230,17 +261,16 @@ export function AutomataCanvas() {
         });
         setPendingTransitionSource(null);
       } else {
-        // Set this state as pending source for next click
         setPendingTransitionSource(stateId);
       }
     },
-    [pendingTransitionSource, setPendingTransitionSource],
+    [simIsActive, pendingTransitionSource, setPendingTransitionSource],
   );
 
   const handleStateDoubleClick = useCallback(
     (e: React.MouseEvent, stateId: string) => {
+      if (simIsActive) return;
       e.stopPropagation();
-      // Double-click on state = self-loop: open symbol modal immediately
       setPendingTransitionSource(null);
       setSymbolModal({
         sourceId: stateId,
@@ -248,31 +278,34 @@ export function AutomataCanvas() {
         position: { x: e.clientX, y: e.clientY },
       });
     },
-    [setPendingTransitionSource],
+    [simIsActive, setPendingTransitionSource],
   );
 
   const handleHandleDragStart = useCallback(
     (e: React.MouseEvent, stateId: string) => {
+      if (simIsActive) return;
       e.stopPropagation();
       const state = automaton.states.find((s) => s.id === stateId);
       if (state) {
         startDrawingTransition(stateId, state.position);
       }
     },
-    [automaton.states, startDrawingTransition],
+    [simIsActive, automaton.states, startDrawingTransition],
   );
 
   const handleTransitionClick = useCallback(
     (e: React.MouseEvent, transitionId: string) => {
+      if (simIsActive) return;
       e.stopPropagation();
       setPendingTransitionSource(null);
       setSelection({ type: 'transition', id: transitionId });
     },
-    [setSelection, setPendingTransitionSource],
+    [simIsActive, setSelection, setPendingTransitionSource],
   );
 
   const handleTransitionDoubleClick = useCallback(
     (e: React.MouseEvent, transitionId: string) => {
+      if (simIsActive) return;
       e.stopPropagation();
       const transition = automaton.transitions.find((t) => t.id === transitionId);
       if (transition) {
@@ -285,7 +318,7 @@ export function AutomataCanvas() {
         });
       }
     },
-    [automaton.transitions],
+    [simIsActive, automaton.transitions],
   );
 
   const handleSymbolModalSubmit = useCallback(
@@ -305,6 +338,31 @@ export function AutomataCanvas() {
     setSymbolModal(null);
   }, []);
 
+  const handleAddHintClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (hoverPoint) {
+        addState(hoverPoint);
+        setHoverPoint(null);
+      }
+    },
+    [hoverPoint, addState],
+  );
+
+  const handleCanvasMouseLeave = useCallback(() => {
+    setHoverPoint(null);
+  }, []);
+
+  // Compute simulation status for each state
+  const getSimStatus = (stateId: string): SimulationStatus => {
+    if (!simSnapshot) return null;
+    const isActive = simSnapshot.activeStateIds.includes(stateId);
+    if (!isActive) return null;
+    if (simSnapshot.status === 'accepted') return 'accepted';
+    if (simSnapshot.status === 'rejected') return 'rejected';
+    return 'active';
+  };
+
   const edgePaths = computeEdgePaths(automaton.states, automaton.transitions);
   const initialState = automaton.states.find((s) => s.isInitial);
   const drawingSource = drawingTransition
@@ -312,6 +370,7 @@ export function AutomataCanvas() {
     : null;
 
   const cursorClass = placingNewState ? 'cursor-crosshair' : '';
+  const showHoverHint = hoverPoint && !drawingTransition && !dragState && !placingNewState && !simIsActive;
 
   return (
     <div className="canvas-container">
@@ -321,6 +380,7 @@ export function AutomataCanvas() {
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleCanvasMouseLeave}
         onWheel={handleWheel}
         data-testid="automata-canvas"
       >
@@ -387,12 +447,14 @@ export function AutomataCanvas() {
           {edgePaths.map((ep) => {
             const transition = automaton.transitions.find((t) => t.id === ep.transitionId);
             if (!transition) return null;
+            const isSimActiveTransition = simSnapshot?.traversedTransitionIds.includes(transition.id) ?? false;
             return (
               <TransitionEdge
                 key={ep.transitionId}
                 edgePath={ep}
                 transition={transition}
                 isSelected={selection?.type === 'transition' && selection.id === ep.transitionId}
+                isSimActive={isSimActiveTransition}
                 onClick={handleTransitionClick}
                 onDoubleClick={handleTransitionDoubleClick}
               />
@@ -412,12 +474,39 @@ export function AutomataCanvas() {
               state={state}
               isSelected={selection?.type === 'state' && selection.id === state.id}
               isPendingSource={pendingTransitionSource?.stateId === state.id}
+              simulationStatus={getSimStatus(state.id)}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
               onHandleDragStart={handleHandleDragStart}
             />
           ))}
+
+          {/* Hover "+" hint for adding states on empty space */}
+          {showHoverHint && (
+            <g className="canvas-add-hint" onClick={handleAddHintClick}>
+              <circle
+                cx={hoverPoint.x}
+                cy={hoverPoint.y}
+                r={12}
+                fill="var(--color-primary)"
+                opacity={0.15}
+              />
+              <text
+                x={hoverPoint.x}
+                y={hoverPoint.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={16}
+                fontWeight="bold"
+                fill="var(--color-primary)"
+                opacity={0.5}
+                pointerEvents="none"
+              >
+                +
+              </text>
+            </g>
+          )}
         </g>
       </svg>
 

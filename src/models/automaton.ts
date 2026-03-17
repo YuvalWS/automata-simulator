@@ -1,5 +1,6 @@
 import type { Point, Viewport } from './geometry';
 import { AutomatonType } from './types';
+import { generateId } from '@/utils/id';
 
 export interface AutomatonState {
   id: string;
@@ -28,12 +29,20 @@ export interface Automaton {
 }
 
 export function createEmptyAutomaton(name = 'Untitled'): Automaton {
+  const initialState: AutomatonState = {
+    id: generateId(),
+    name: 'q0',
+    position: { x: 200, y: 250 },
+    isInitial: true,
+    isAccepting: false,
+  };
+
   return {
     id: crypto.randomUUID(),
     name,
     type: AutomatonType.DFA,
     alphabet: [],
-    states: [],
+    states: [initialState],
     transitions: [],
     viewport: { panX: 0, panY: 0, zoom: 1 },
   };

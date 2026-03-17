@@ -1,0 +1,220 @@
+.simulation-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sim-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.sim-word-input {
+  flex: 1;
+}
+
+.sim-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.sim-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: all 0.15s;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.sim-btn:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.sim-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sim-btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.sim-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.sim-btn-secondary {
+  background: var(--color-bg);
+}
+
+.sim-btn-exit {
+  width: 100%;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.sim-btn-exit:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Validation messages */
+.sim-validation {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.sim-msg {
+  font-size: 12px;
+  padding: 4px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.sim-msg-icon {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.sim-msg-error {
+  color: var(--color-danger);
+}
+
+.sim-msg-warning {
+  color: #d97706;
+}
+
+/* Word display */
+.sim-word-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.sim-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.sim-symbol-consumed {
+  opacity: 0.4;
+}
+
+.sim-symbol-current {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* Status badge */
+.sim-status {
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.sim-status-running {
+  background: #eff6ff;
+  color: var(--color-primary);
+  border: 1px solid #bfdbfe;
+}
+
+.sim-status-accepted {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.sim-status-rejected {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Active states display */
+.sim-active-states {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.sim-state-list {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
+/* Step controls */
+.sim-controls {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.sim-ctrl-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+.sim-ctrl-play {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  min-width: 44px;
+}
+
+.sim-ctrl-play:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+/* Speed slider */
+.sim-speed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.sim-speed-slider {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
