@@ -4,6 +4,9 @@ import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
 import { clearAutosave } from '@/hooks/use-autosave';
+import { useTheme } from '@/hooks/use-theme';
+import { computeFitViewport } from '@/utils/fit-viewport';
+import { exportAutomatonAsPng } from '@/services/export/png-export';
 import './Toolbar.css';
 
 export function Toolbar() {
@@ -21,6 +24,7 @@ export function Toolbar() {
   const simIsActive = useSimulationStore((s) => s.isActive);
   const enterSimulation = useSimulationStore((s) => s.enterSimulation);
   const exitSimulation = useSimulationStore((s) => s.exitSimulation);
+  const { theme, toggleTheme } = useTheme();
 
   const { panX, panY, zoom } = automaton.viewport;
 
@@ -38,12 +42,29 @@ export function Toolbar() {
     setDirty(false);
   };
 
+  const handleExportPng = async () => {
+    const svg = document.querySelector('.automata-canvas') as SVGSVGElement | null;
+    if (!svg) return;
+    try {
+      await exportAutomatonAsPng(svg, automaton.states);
+    } catch {
+      // Export failed silently
+    }
+  };
+
   const handleLoad = async () => {
     const loaded = await loadFromJsonFile();
     if (loaded) {
       setAutomaton(loaded);
       setDirty(false);
     }
+  };
+
+  const handleFitToContent = () => {
+    const svg = document.querySelector('.automata-canvas');
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    setViewport(computeFitViewport(automaton.states, rect.width, rect.height));
   };
 
   const handleZoom = (factor: number) => {
@@ -76,6 +97,14 @@ export function Toolbar() {
         </button>
         <button className="toolbar-btn" onClick={handleLoad} disabled={simIsActive} title="Load (Ctrl+O)">
           Load
+        </button>
+        <button
+          className="toolbar-btn"
+          onClick={handleExportPng}
+          disabled={automaton.states.length === 0}
+          title="Export as PNG"
+        >
+          PNG
         </button>
         <span className="toolbar-separator" />
         <button
@@ -126,9 +155,20 @@ export function Toolbar() {
         <button className="toolbar-btn toolbar-zoom-btn" onClick={() => handleZoom(1.25)} title="Zoom In">
           +
         </button>
+        <button
+          className="toolbar-btn toolbar-zoom-btn"
+          onClick={handleFitToContent}
+          disabled={automaton.states.length === 0}
+          title="Fit to Content"
+        >
+          Fit
+        </button>
       </div>
 
       <div className="toolbar-group toolbar-info">
+        <button className="toolbar-btn toolbar-theme-btn" onClick={toggleTheme} title="Toggle dark/light mode">
+          {theme === 'light' ? '\u263E' : '\u2600'}
+        </button>
         <span className="automaton-type-badge">{automaton.type}</span>
         <span className="automaton-name">{automaton.name}</span>
       </div>

@@ -29,11 +29,22 @@ const instructions = [
   'Scroll to zoom, drag empty canvas to pan.',
   'Select an element and press Delete to remove it.',
   'Click Simulate to enter simulation mode. Run auto-plays the trace.',
+  'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
+  'Click "Fit" in the zoom controls to fit all states in view.',
+  'Click the sun/moon icon to toggle dark mode.',
+  'Click "PNG" to export the diagram as an image.',
 ];
 
 export function ShortcutsTooltip() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    const seen = localStorage.getItem('automata-help-seen');
+    if (!seen) {
+      localStorage.setItem('automata-help-seen', '1');
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div className="shortcuts-container">

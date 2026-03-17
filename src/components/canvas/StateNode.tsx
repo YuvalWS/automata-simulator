@@ -12,6 +12,7 @@ interface StateNodeProps {
   isSelected: boolean;
   isPendingSource?: boolean;
   simulationStatus?: SimulationStatus;
+  handleAngle?: number;
   onMouseDown: (e: React.MouseEvent, stateId: string) => void;
   onMouseUp: (e: React.MouseEvent, stateId: string) => void;
   onDoubleClick: (e: React.MouseEvent, stateId: string) => void;
@@ -23,6 +24,7 @@ export function StateNode({
   isSelected,
   isPendingSource,
   simulationStatus,
+  handleAngle,
   onMouseDown,
   onMouseUp,
   onDoubleClick,
@@ -35,15 +37,15 @@ export function StateNode({
   let strokeWidth = 2;
 
   if (simulationStatus === 'active') {
-    fillColor = '#ecfdf5';
+    fillColor = 'var(--color-sim-active-fill)';
     strokeColor = 'var(--color-accent)';
     strokeWidth = 3;
   } else if (simulationStatus === 'accepted') {
-    fillColor = '#dcfce7';
-    strokeColor = '#059669';
+    fillColor = 'var(--color-sim-accepted-fill)';
+    strokeColor = 'var(--color-sim-accepted-stroke)';
     strokeWidth = 3;
   } else if (simulationStatus === 'rejected') {
-    fillColor = '#fef2f2';
+    fillColor = 'var(--color-sim-rejected-fill)';
     strokeColor = 'var(--color-danger)';
     strokeWidth = 3;
   } else if (isPendingSource) {
@@ -111,39 +113,44 @@ export function StateNode({
       >
         {state.name}
       </text>
-      {/* Drag handle for creating transitions — visible on hover, hidden during simulation */}
-      {!simulationStatus && (
-        <>
-          <circle
-            className="state-transition-handle"
-            cx={x + HANDLE_DISTANCE}
-            cy={y}
-            r={HANDLE_RADIUS}
-            fill="var(--color-primary)"
-            stroke="white"
-            strokeWidth={1.5}
-            opacity={0}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onHandleDragStart(e, state.id);
-            }}
-            style={{ cursor: 'crosshair' }}
-          />
-          <text
-            className="state-transition-handle"
-            x={x + HANDLE_DISTANCE}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize="10"
-            fill="white"
-            pointerEvents="none"
-            opacity={0}
-          >
-            {'\u2192'}
-          </text>
-        </>
-      )}
+      {/* Drag handle for creating transitions — follows mouse angle around state, hidden during simulation */}
+      {!simulationStatus && (() => {
+        const angle = handleAngle ?? 0;
+        const hx = x + HANDLE_DISTANCE * Math.cos(angle);
+        const hy = y + HANDLE_DISTANCE * Math.sin(angle);
+        return (
+          <>
+            <circle
+              className="state-transition-handle"
+              cx={hx}
+              cy={hy}
+              r={HANDLE_RADIUS}
+              fill="var(--color-primary)"
+              stroke="white"
+              strokeWidth={1.5}
+              opacity={0}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onHandleDragStart(e, state.id);
+              }}
+              style={{ cursor: 'crosshair' }}
+            />
+            <text
+              className="state-transition-handle"
+              x={hx}
+              y={hy}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="10"
+              fill="white"
+              pointerEvents="none"
+              opacity={0}
+            >
+              {'\u2192'}
+            </text>
+          </>
+        );
+      })()}
     </g>
   );
 }

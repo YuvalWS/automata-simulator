@@ -25,6 +25,7 @@ interface AutomatonStore {
   addState: (position: Point) => AutomatonState;
   removeState: (id: string) => void;
   updateState: (id: string, updates: Partial<Pick<AutomatonState, 'name' | 'position' | 'isInitial' | 'isAccepting'>>) => void;
+  moveState: (id: string, position: Point) => void;
   setInitialState: (id: string) => void;
   toggleAccepting: (id: string) => void;
 
@@ -110,6 +111,18 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
           }
           return { ...st, ...updates };
         }),
+      },
+    }));
+  },
+
+  // Move state without pushing history — used during drag (history pushed once on drag end)
+  moveState: (id, position) => {
+    set((s) => ({
+      automaton: {
+        ...s.automaton,
+        states: s.automaton.states.map((st) =>
+          st.id === id ? { ...st, position } : st,
+        ),
       },
     }));
   },

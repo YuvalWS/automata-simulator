@@ -15,7 +15,10 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Snap-to-alignment** — states snap to horizontal/vertical alignment when dragged near other states, with visual guide lines
 - **New diagram with q0** — new automata start with an initial state already placed
 - **Hover "+" hint** — hover on empty canvas to see a placement hint; click to add a state
-- **Zoom controls** — scroll to zoom + toolbar +/- buttons with percentage display
+- **Random word generator** — generate a random word from the alphabet for quick testing
+- **Zoom controls** — scroll to zoom + toolbar +/- buttons with percentage display + fit-to-content
+- **Dark mode** — toggle between light and dark themes; respects system preference
+- **PNG export** — export the diagram as a high-resolution PNG image
 - **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport)
 - **Auto-save** — current state automatically saved to browser storage; restored on page reload
 - **Unsaved changes warning** — browser warns before closing tab with unsaved work
@@ -23,7 +26,7 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Properties panel** — edit state names, toggle initial/accepting, modify transition symbols
 - **Styled transition editor** — custom modal for entering/editing transition symbols (no browser prompts)
 - **Intuitive interactions** — click two states to create a transition; double-click for self-loop; drag handle on hover
-- **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts and instructions
+- **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts and instructions; auto-opens on first visit
 
 ## How to Use
 
@@ -42,7 +45,7 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 ## Simulation
 
 1. Click **Simulate** in the toolbar (or build your automaton first)
-2. Enter a word (e.g., `a,b,a` or `aba`) and click **Run** — the animation auto-plays and shows the final accept/reject result
+2. Enter a word (e.g., `a,b,a` or `aba`), or click **Random** to generate one, then click **Run** — the animation auto-plays and shows the final accept/reject result
 3. Use step controls or keyboard shortcuts to replay the trace
 4. Active states glow green; traversed transitions are highlighted
 5. Switch to **Batch** mode to test multiple words at once (one per line)
@@ -106,11 +109,12 @@ src/
 ├── services/
 │   ├── serialization/  # JSON save & load with Zod validation
 │   ├── layout/         # Edge routing, Bezier curves, label overlap avoidance, self-loop placement
-│   └── simulation/     # DFA/NFA trace engine, pre-simulation validator
-├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning
-└── utils/         # Math, Bezier, ID generation, snap-to-alignment
+│   ├── simulation/     # DFA/NFA trace engine, pre-simulation validator
+│   └── export/         # PNG image export
+├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning, theme
+└── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 183 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 193 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -123,5 +127,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (183 unit tests)
+- Vitest for tests (193 unit tests)
 - Docker + Express for deployment
