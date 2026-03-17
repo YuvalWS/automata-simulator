@@ -29,7 +29,11 @@ const instructions = [
   'Scroll to zoom, drag empty canvas to pan.',
   'Select an element and press Delete to remove it.',
   'Click Simulate to enter simulation mode. Run auto-plays the trace.',
+  'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
+  'Click "Fit" in the zoom controls to fit all states in view.',
+  'Click the sun/moon icon to toggle dark mode.',
+  'Click "PNG" to export the diagram as an image.',
 ];
 
 export function ShortcutsTooltip() {
