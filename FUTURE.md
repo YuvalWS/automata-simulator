@@ -3,9 +3,11 @@
 ## Planned
 - Tab support for multiple automata
 - Hebrew UI support (RTL text, right-aligned labels)
-- SEO improvements (meta tags, server-side rendering), SEO description, whatsapp preview image, etc.
-- AI Readme, to allow LLMs to understand the json file format and generate/read automata from files, or explain automata in natural language.
 - Demo pictures and videos for the README and website, showing off features and how to use the app.
+
+## Done
+- ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
+- ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
 
 ## Other Ideas
 - Image export to clipboard

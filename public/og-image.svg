@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#f8fafc" rx="0"/>
+
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#334155"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Automata diagram -->
+  <!-- State q0 -->
+  <circle cx="340" cy="340" r="42" fill="#ffffff" stroke="#334155" stroke-width="3"/>
+  <text x="340" y="348" text-anchor="middle" font-family="system-ui, sans-serif" font-size="28" font-weight="600" fill="#334155">q0</text>
+  <!-- Initial arrow -->
+  <line x1="255" y1="340" x2="295" y2="340" stroke="#334155" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- State q1 -->
+  <circle cx="560" cy="340" r="42" fill="#ffffff" stroke="#334155" stroke-width="3"/>
+  <text x="560" y="348" text-anchor="middle" font-family="system-ui, sans-serif" font-size="28" font-weight="600" fill="#334155">q1</text>
+
+  <!-- State q2 (accepting) -->
+  <circle cx="780" cy="340" r="42" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+  <circle cx="780" cy="340" r="36" fill="none" stroke="#2563eb" stroke-width="2"/>
+  <text x="780" y="348" text-anchor="middle" font-family="system-ui, sans-serif" font-size="28" font-weight="600" fill="#2563eb">q2</text>
+
+  <!-- Transition q0 -> q1 (a) -->
+  <line x1="384" y1="330" x2="516" y2="330" stroke="#334155" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="425" y="308" width="26" height="22" fill="#f8fafc" rx="3"/>
+  <text x="438" y="325" text-anchor="middle" font-family="ui-monospace, monospace" font-size="18" font-weight="500" fill="#334155">a</text>
+
+  <!-- Transition q1 -> q0 (b) -->
+  <line x1="516" y1="355" x2="384" y2="355" stroke="#334155" stroke-width="2.5" marker-end="url(#arr)"/>
+  <rect x="425" y="358" width="26" height="22" fill="#f8fafc" rx="3"/>
+  <text x="438" y="375" text-anchor="middle" font-family="ui-monospace, monospace" font-size="18" font-weight="500" fill="#334155">b</text>
+
+  <!-- Transition q1 -> q2 (a) highlighted -->
+  <line x1="604" y1="340" x2="736" y2="340" stroke="#2563eb" stroke-width="3" marker-end="url(#arr-blue)"/>
+  <rect x="647" y="318" width="26" height="22" fill="#f8fafc" rx="3"/>
+  <text x="660" y="335" text-anchor="middle" font-family="ui-monospace, monospace" font-size="18" font-weight="600" fill="#2563eb">a</text>
+
+  <!-- Self-loop on q2 (a,b) -->
+  <path d="M 762 302 C 745 250 815 250 798 302" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+  <rect x="762" y="248" width="36" height="22" fill="#f8fafc" rx="3"/>
+  <text x="780" y="265" text-anchor="middle" font-family="ui-monospace, monospace" font-size="18" font-weight="500" fill="#2563eb">a,b</text>
+
+  <!-- Title -->
+  <text x="600" y="120" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="700" fill="#0f172a">Automata Simulator</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="168" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="400" fill="#64748b">Visual DFA &amp; NFA Editor · Simulate · Export</text>
+
+  <!-- URL at bottom -->
+  <text x="600" y="580" text-anchor="middle" font-family="ui-monospace, monospace" font-size="18" font-weight="400" fill="#94a3b8">automata.yuweiss.dev</text>
+</svg>
