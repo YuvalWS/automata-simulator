@@ -2,9 +2,15 @@ import type { Automaton } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
 import { EPSILON } from '@/models/epsilon';
 
+export interface ValidationAction {
+  label: string;
+  key: string;
+}
+
 export interface ValidationMessage {
   type: 'error' | 'warning';
   message: string;
+  action?: ValidationAction;
 }
 
 export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
@@ -41,6 +47,7 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
           messages.push({
             type: 'error',
             message: `DFA conflict: state "${state.name}" has ${count} transitions on symbol "${sym}".`,
+            action: { label: 'Switch to NFA', key: 'switch-nfa' },
           });
         }
       }

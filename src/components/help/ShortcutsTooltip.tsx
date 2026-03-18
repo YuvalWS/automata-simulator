@@ -3,12 +3,14 @@ import './ShortcutsTooltip.css';
 
 const shortcuts = [
   { key: 'N', action: 'New State (click canvas to place)' },
+  { key: 'Space', action: 'Toggle accepting (when state selected)' },
   { key: 'Delete', action: 'Delete selected element' },
   { key: 'Escape', action: 'Cancel / Exit simulation' },
   { key: 'Ctrl+Z', action: 'Undo' },
   { key: 'Ctrl+Shift+Z', action: 'Redo' },
   { key: 'Ctrl+S', action: 'Save to file' },
   { key: 'Ctrl+O', action: 'Load from file' },
+  { key: 'Ctrl+A', action: 'Select all states' },
   { key: 'Ctrl+N', action: 'New automaton' },
 ];
 
@@ -23,11 +25,12 @@ const instructions = [
   'Click "+ New State" or press N, then click the canvas to place a state.',
   'Click a state, then click another state within 3s to create a transition.',
   'Double-click a state to create a self-loop.',
-  'Drag the arrow handle (appears on hover) from one state to another.',
+  'Drag the arrow handle (appears on hover) from one state to another, or to empty space to create a new state.',
   'Double-click a transition to edit its symbols.',
   'Drag states to move them — they snap to alignment with other states.',
+  'Shift+click states to add/remove from multi-selection. Shift+drag on canvas for rubber-band selection.',
   'Scroll to zoom, drag empty canvas to pan.',
-  'Select an element and press Delete to remove it.',
+  'Select element(s) and press Delete to remove them. Ctrl+A to select all.',
   'Click Simulate to enter simulation mode. Run auto-plays the trace.',
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
@@ -84,6 +87,14 @@ export function ShortcutsTooltip() {
                 <li key={i}>{instr}</li>
               ))}
             </ul>
+          </div>
+          <div className="shortcuts-credits">
+            <span>Created by </span>
+            <a href="https://github.com/YuvalWS" target="_blank" rel="noopener noreferrer">Yuval Weiss</a>
+            <span className="shortcuts-credits-sep">{' \u00B7 '}</span>
+            <a href="https://github.com/YuvalWS/automata-simulator" target="_blank" rel="noopener noreferrer">Repo</a>
+            <span className="shortcuts-credits-sep">{' \u00B7 '}</span>
+            <a href="https://yuweiss.dev/" target="_blank" rel="noopener noreferrer">Blog</a>
           </div>
         </div>
       )}

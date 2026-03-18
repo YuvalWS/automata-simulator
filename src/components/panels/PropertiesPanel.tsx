@@ -9,13 +9,17 @@ export function PropertiesPanel() {
   const selection = useEditorStore((s) => s.selection);
   const automaton = useAutomatonStore((s) => s.automaton);
 
-  const selectedState = selection?.type === 'state'
-    ? automaton.states.find((s) => s.id === selection.id)
+  const singleSel = selection.length === 1 ? selection[0]! : null;
+
+  const selectedState = singleSel?.type === 'state'
+    ? automaton.states.find((s) => s.id === singleSel.id)
     : null;
 
-  const selectedTransition = selection?.type === 'transition'
-    ? automaton.transitions.find((t) => t.id === selection.id)
+  const selectedTransition = singleSel?.type === 'transition'
+    ? automaton.transitions.find((t) => t.id === singleSel.id)
     : null;
+
+  const multiCount = selection.length > 1 ? selection.length : 0;
 
   return (
     <div className="properties-panel" data-testid="properties-panel">
@@ -29,7 +33,15 @@ export function PropertiesPanel() {
         <TransitionProperties transition={selectedTransition} />
       )}
 
-      {!selectedState && !selectedTransition && (
+      {multiCount > 0 && (
+        <div className="panel-section">
+          <div className="panel-hint">
+            {multiCount} elements selected
+          </div>
+        </div>
+      )}
+
+      {!selectedState && !selectedTransition && multiCount === 0 && (
         <div className="panel-section">
           <div className="panel-hint">
             Select a state or transition to edit its properties.

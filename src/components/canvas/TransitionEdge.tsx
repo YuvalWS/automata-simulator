@@ -38,7 +38,7 @@ export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, 
         d={edgePath.path}
         fill="none"
         stroke="transparent"
-        strokeWidth={12}
+        strokeWidth={24}
       />
       {/* Visible path */}
       <path

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useSimulationStore } from '@/stores/simulation-store';
-import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
+import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
 import { clearAutosave } from './use-autosave';
 
 export function useKeyboardShortcuts() {
@@ -12,6 +12,7 @@ export function useKeyboardShortcuts() {
   const startPlacingState = useEditorStore((s) => s.startPlacingState);
   const removeState = useAutomatonStore((s) => s.removeState);
   const removeTransition = useAutomatonStore((s) => s.removeTransition);
+  const toggleAccepting = useAutomatonStore((s) => s.toggleAccepting);
   const undo = useAutomatonStore((s) => s.undo);
   const redo = useAutomatonStore((s) => s.redo);
 
@@ -106,6 +107,12 @@ export function useKeyboardShortcuts() {
               }
             });
             return;
+          case 'a':
+            e.preventDefault();
+            useEditorStore.getState().setSelection(
+              useAutomatonStore.getState().automaton.states.map((s) => ({ type: 'state' as const, id: s.id })),
+            );
+            return;
           case 'n':
             e.preventDefault();
             if (useAutomatonStore.getState().automaton.states.length > 0) {
@@ -113,6 +120,7 @@ export function useKeyboardShortcuts() {
             }
             useAutomatonStore.getState().newAutomaton();
             clearAutosave();
+            clearFileHandle();
             setDirty(false);
             return;
         }
@@ -120,22 +128,38 @@ export function useKeyboardShortcuts() {
       }
 
       // Non-modifier shortcuts (editing mode only)
-      switch (e.key.toLowerCase()) {
+      switch (e.key) {
+        case ' ':
+          // Toggle accepting for all selected states
+          for (const sel of selection) {
+            if (sel.type === 'state') {
+              e.preventDefault();
+              toggleAccepting(sel.id);
+            }
+          }
+          break;
         case 'n':
+        case 'N':
           startPlacingState();
           break;
-        case 'delete':
-        case 'backspace':
-          if (selection) {
-            if (selection.type === 'state') removeState(selection.id);
-            else removeTransition(selection.id);
+        case 'Delete':
+        case 'Backspace':
+          if (selection.length > 0) {
+            for (const sel of selection) {
+              if (sel.type === 'state') removeState(sel.id);
+              else removeTransition(sel.id);
+            }
             clearSelection();
           }
+          break;
+        case 'a':
+        case 'A':
+          // Ctrl+A handled above, but check for just 'a' in case ctrl wasn't caught
           break;
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selection, clearSelection, removeState, removeTransition, undo, redo, setDirty, startPlacingState]);
+  }, [selection, clearSelection, removeState, removeTransition, toggleAccepting, undo, redo, setDirty, startPlacingState]);
 }

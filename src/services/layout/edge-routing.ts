@@ -109,6 +109,11 @@ function bestSelfLoopAngle(
     }
   }
 
+  // If state is initial, treat the initial arrow (from left, angle π) as a connected edge
+  if (state.isInitial) {
+    angles.push(Math.PI);
+  }
+
   if (angles.length === 0) return -Math.PI / 2; // default: top
 
   // Average angle of connected edges
@@ -138,6 +143,44 @@ export function computeEdgePaths(
     }
   }
 
+  // Compute fan-out offsets for edges sharing a source/target that go in similar directions
+  const FAN_OFFSET = 15;
+  const fanOffsets = new Map<string, number>(); // transition id -> offset
+
+  // Group non-self-loop, non-bidirectional edges by source
+  const edgesBySource = new Map<string, Transition[]>();
+  for (const t of transitions) {
+    if (t.sourceId === t.targetId) continue;
+    const pairKey = [t.sourceId, t.targetId].sort().join('::');
+    if (bidirectionalPairs.has(pairKey)) continue;
+    const list = edgesBySource.get(t.sourceId) ?? [];
+    list.push(t);
+    edgesBySource.set(t.sourceId, list);
+  }
+
+  for (const [sourceId, group] of edgesBySource) {
+    if (group.length < 2) continue;
+    const source = stateMap.get(sourceId);
+    if (!source) continue;
+
+    // Sort by angle to target
+    const sorted = group
+      .map((t) => {
+        const target = stateMap.get(t.targetId);
+        if (!target) return null;
+        const angle = Math.atan2(target.position.y - source.position.y, target.position.x - source.position.x);
+        return { t, angle };
+      })
+      .filter((e): e is { t: Transition; angle: number } => e !== null)
+      .sort((a, b) => a.angle - b.angle);
+
+    // Apply offsets centered around 0 for the group
+    for (let i = 0; i < sorted.length; i++) {
+      const offset = (i - (sorted.length - 1) / 2) * FAN_OFFSET;
+      fanOffsets.set(sorted[i]!.t.id, offset);
+    }
+  }
+
   for (const t of transitions) {
     const source = stateMap.get(t.sourceId);
     const target = stateMap.get(t.targetId);
@@ -150,8 +193,10 @@ export function computeEdgePaths(
       const pairKey = [t.sourceId, t.targetId].sort().join('::');
       const isBidirectional = bidirectionalPairs.has(pairKey);
       const offsetDir = t.sourceId < t.targetId ? 1 : -1;
+      const baseOffset = isBidirectional ? PARALLEL_OFFSET * offsetDir : 0;
+      const fanOffset = fanOffsets.get(t.id) ?? 0;
       paths.push(
-        computeEdge(t, source, target, isBidirectional ? PARALLEL_OFFSET * offsetDir : 0),
+        computeEdge(t, source, target, baseOffset + fanOffset),
       );
     }
   }

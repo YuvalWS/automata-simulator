@@ -57,18 +57,18 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="a, b, \u03B5"
+            placeholder={'a, b, ' + EPSILON}
           />
           <button
             type="button"
             className="symbol-modal-btn epsilon"
             onClick={() => setValue((v) => v.trim() ? `${v}, ${EPSILON}` : EPSILON)}
-            title="Add epsilon (\u03B5) transition"
+            title={'Add epsilon (' + EPSILON + ') transition'}
           >
             {'\u03B5'}
           </button>
         </div>
-        <div className="symbol-modal-hint">Comma-separated. Use \u03B5 for epsilon transitions. Enter to confirm.</div>
+        <div className="symbol-modal-hint">{'Comma-separated. Use ' + EPSILON + ' for epsilon transitions. Enter to confirm.'}</div>
         <div className="symbol-modal-actions">
           <button className="symbol-modal-btn cancel" onClick={onCancel}>Cancel</button>
           <button className="symbol-modal-btn confirm" onClick={handleSubmit}>Confirm</button>

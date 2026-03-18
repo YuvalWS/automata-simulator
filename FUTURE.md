@@ -8,7 +8,7 @@
 - Demo pictures and videos for the README and website, showing off features and how to use the app.
 
 ## Other Ideas
-- Image export (to clipbard or file) 
+- Image export to clipboard
 - PDA (pushdown automata) support
 - NFA to DFA conversion (subset construction)
 - Turing Machine simulation

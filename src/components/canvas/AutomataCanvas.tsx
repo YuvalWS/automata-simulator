@@ -27,11 +27,17 @@ interface SymbolModalState {
   editingTransitionId?: string;
 }
 
+interface GroupDragState {
+  primaryId: string;
+  offset: { x: number; y: number };
+  offsets: Map<string, { x: number; y: number }>;
+  preDragAutomaton: Automaton;
+}
+
 export function AutomataCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const automaton = useAutomatonStore((s) => s.automaton);
   const addState = useAutomatonStore((s) => s.addState);
-  const updateState = useAutomatonStore((s) => s.updateState);
   const moveState = useAutomatonStore((s) => s.moveState);
   const addTransition = useAutomatonStore((s) => s.addTransition);
   const updateTransition = useAutomatonStore((s) => s.updateTransition);
@@ -40,6 +46,9 @@ export function AutomataCanvas() {
   const selection = useEditorStore((s) => s.selection);
   const setSelection = useEditorStore((s) => s.setSelection);
   const clearSelection = useEditorStore((s) => s.clearSelection);
+  const toggleInSelection = useEditorStore((s) => s.toggleInSelection);
+  const selectionBox = useEditorStore((s) => s.selectionBox);
+  const setSelectionBox = useEditorStore((s) => s.setSelectionBox);
   const drawingTransition = useEditorStore((s) => s.drawingTransition);
   const startDrawingTransition = useEditorStore((s) => s.startDrawingTransition);
   const updateDrawingTransition = useEditorStore((s) => s.updateDrawingTransition);
@@ -56,7 +65,7 @@ export function AutomataCanvas() {
 
   const { panX, panY, zoom } = automaton.viewport;
   const [isPanning, setIsPanning] = useState(false);
-  const [dragState, setDragState] = useState<{ id: string; offset: { x: number; y: number }; preDragAutomaton: Automaton } | null>(null);
+  const [dragState, setDragState] = useState<GroupDragState | null>(null);
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
@@ -64,6 +73,13 @@ export function AutomataCanvas() {
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
+
+  // Helper: is a given id in the current selection?
+  const isSelected = useCallback(
+    (type: 'state' | 'transition', id: string) =>
+      selection.some((s) => s.type === type && s.id === id),
+    [selection],
+  );
 
   const getSvgPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -116,13 +132,20 @@ export function AutomataCanvas() {
       }
 
       if (isCanvas) {
-        clearSelection();
-        setPendingTransitionSource(null);
-        setIsPanning(true);
-        panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
+        if (e.shiftKey) {
+          // Start rubber-band selection
+          const point = getSvgPoint(e.clientX, e.clientY);
+          setSelectionBox({ start: point, end: point });
+          mouseDownPos.current = { x: e.clientX, y: e.clientY };
+        } else {
+          clearSelection();
+          setPendingTransitionSource(null);
+          setIsPanning(true);
+          panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
+        }
       }
     },
-    [simIsActive, placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, panX, panY],
+    [simIsActive, placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, setSelectionBox, panX, panY],
   );
 
   const handleMouseMove = useCallback(
@@ -141,6 +164,25 @@ export function AutomataCanvas() {
       // During simulation, no editing interactions
       if (simIsActive) return;
 
+      // Rubber-band selection
+      if (selectionBox) {
+        const point = getSvgPoint(e.clientX, e.clientY);
+        setSelectionBox({ start: selectionBox.start, end: point });
+
+        // Compute which states are inside the box
+        const minX = Math.min(selectionBox.start.x, point.x);
+        const maxX = Math.max(selectionBox.start.x, point.x);
+        const minY = Math.min(selectionBox.start.y, point.y);
+        const maxY = Math.max(selectionBox.start.y, point.y);
+
+        const insideStates = automaton.states.filter((s) =>
+          s.position.x >= minX && s.position.x <= maxX &&
+          s.position.y >= minY && s.position.y <= maxY,
+        );
+        setSelection(insideStates.map((s) => ({ type: 'state' as const, id: s.id })));
+        return;
+      }
+
       if (dragState) {
         didDrag.current = true;
         const point = getSvgPoint(e.clientX, e.clientY);
@@ -148,9 +190,25 @@ export function AutomataCanvas() {
           x: point.x + dragState.offset.x,
           y: point.y + dragState.offset.y,
         };
-        const snappedPos = snapToAlignment(rawPos, dragState.id, automaton.states);
-        moveState(dragState.id, snappedPos);
-        setSnapGuides(computeSnapGuides(snappedPos, dragState.id, automaton.states));
+        const snappedPos = snapToAlignment(rawPos, dragState.primaryId, automaton.states);
+        // Snap adjustment to apply to all states in the group
+        const snapDelta = {
+          x: snappedPos.x - rawPos.x,
+          y: snappedPos.y - rawPos.y,
+        };
+
+        // Move the primary dragged state
+        moveState(dragState.primaryId, snappedPos);
+        setSnapGuides(computeSnapGuides(snappedPos, dragState.primaryId, automaton.states));
+
+        // Move all other selected states by the same delta
+        for (const [id, off] of dragState.offsets) {
+          if (id === dragState.primaryId) continue;
+          moveState(id, {
+            x: point.x + off.x + snapDelta.x,
+            y: point.y + off.y + snapDelta.y,
+          });
+        }
         return;
       }
 
@@ -174,7 +232,7 @@ export function AutomataCanvas() {
       setHandleHover(nearestState ? { stateId: nearestState.id, angle: nearestState.angle } : null);
       setHoverPoint(nearestState ? null : svgPoint);
     },
-    [isPanning, simIsActive, dragState, drawingTransition, getSvgPoint, setViewport, updateState, updateDrawingTransition, zoom, automaton.states],
+    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, getSvgPoint, setViewport, setSelectionBox, setSelection, updateDrawingTransition, zoom, automaton.states, moveState],
   );
 
   const handleMouseUp = useCallback(
@@ -185,6 +243,12 @@ export function AutomataCanvas() {
       }
 
       if (simIsActive) return;
+
+      // Finalize rubber-band selection
+      if (selectionBox) {
+        setSelectionBox(null);
+        return;
+      }
 
       if (dragState) {
         if (didDrag.current) {
@@ -205,12 +269,23 @@ export function AutomataCanvas() {
             targetId: targetState.id,
             position: { x: e.clientX, y: e.clientY },
           });
+        } else {
+          // Dropped on empty space — create a new state there and prompt for symbols
+          const svgPoint = getSvgPoint(e.clientX, e.clientY);
+          const newState = addState(svgPoint);
+          if (newState) {
+            setSymbolModal({
+              sourceId: drawingTransition.sourceId,
+              targetId: newState.id,
+              position: { x: e.clientX, y: e.clientY },
+            });
+          }
         }
         stopDrawingTransition();
         return;
       }
     },
-    [isPanning, simIsActive, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition],
+    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition, getSvgPoint, addState, setSelectionBox],
   );
 
   const handleWheel = useCallback(
@@ -241,21 +316,52 @@ export function AutomataCanvas() {
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
       didDrag.current = false;
 
-      setSelection({ type: 'state', id: stateId });
-      const state = automaton.states.find((s) => s.id === stateId);
-      if (state) {
-        const point = getSvgPoint(e.clientX, e.clientY);
-        setDragState({
-          id: stateId,
-          offset: {
+      const isAlreadySelected = selection.some((s) => s.type === 'state' && s.id === stateId);
+
+      if (e.shiftKey) {
+        // Toggle this state in/out of selection
+        toggleInSelection({ type: 'state', id: stateId });
+      } else if (!isAlreadySelected) {
+        // Replace selection with just this state
+        setSelection({ type: 'state', id: stateId });
+      }
+      // If already selected (no shift), keep current selection for potential group drag
+
+      // Compute offsets for group drag
+      const point = getSvgPoint(e.clientX, e.clientY);
+      const currentSel = e.shiftKey
+        ? useEditorStore.getState().selection
+        : isAlreadySelected ? selection : [{ type: 'state' as const, id: stateId }];
+
+      const selectedStateIds = currentSel
+        .filter((s) => s.type === 'state')
+        .map((s) => s.id);
+
+      const offsets = new Map<string, { x: number; y: number }>();
+      for (const id of selectedStateIds) {
+        const state = automaton.states.find((s) => s.id === id);
+        if (state) {
+          offsets.set(id, {
             x: state.position.x - point.x,
             y: state.position.y - point.y,
+          });
+        }
+      }
+
+      const primaryState = automaton.states.find((s) => s.id === stateId);
+      if (primaryState) {
+        setDragState({
+          primaryId: stateId,
+          offset: {
+            x: primaryState.position.x - point.x,
+            y: primaryState.position.y - point.y,
           },
+          offsets,
           preDragAutomaton: automaton,
         });
       }
     },
-    [simIsActive, automaton.states, getSvgPoint, setSelection],
+    [simIsActive, automaton, getSvgPoint, setSelection, toggleInSelection, selection],
   );
 
   const handleStateMouseUp = useCallback(
@@ -390,6 +496,14 @@ export function AutomataCanvas() {
   const cursorClass = placingNewState ? 'cursor-crosshair' : '';
   const showHoverHint = hoverPoint && !drawingTransition && !dragState && !placingNewState && !simIsActive;
 
+  // Rubber-band box coordinates
+  const boxRect = selectionBox ? {
+    x: Math.min(selectionBox.start.x, selectionBox.end.x),
+    y: Math.min(selectionBox.start.y, selectionBox.end.y),
+    width: Math.abs(selectionBox.end.x - selectionBox.start.x),
+    height: Math.abs(selectionBox.end.y - selectionBox.start.y),
+  } : null;
+
   return (
     <div className="canvas-container">
       <svg
@@ -471,7 +585,7 @@ export function AutomataCanvas() {
                 key={ep.transitionId}
                 edgePath={ep}
                 transition={transition}
-                isSelected={selection?.type === 'transition' && selection.id === ep.transitionId}
+                isSelected={isSelected('transition', ep.transitionId)}
                 isSimActive={isSimActiveTransition}
                 onClick={handleTransitionClick}
                 onDoubleClick={handleTransitionDoubleClick}
@@ -490,7 +604,7 @@ export function AutomataCanvas() {
             <StateNode
               key={state.id}
               state={state}
-              isSelected={selection?.type === 'state' && selection.id === state.id}
+              isSelected={isSelected('state', state.id)}
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
               handleAngle={handleHover?.stateId === state.id ? handleHover.angle : undefined}
@@ -500,6 +614,22 @@ export function AutomataCanvas() {
               onHandleDragStart={handleHandleDragStart}
             />
           ))}
+
+          {/* Rubber-band selection rectangle */}
+          {boxRect && (
+            <rect
+              x={boxRect.x}
+              y={boxRect.y}
+              width={boxRect.width}
+              height={boxRect.height}
+              fill="var(--color-primary)"
+              fillOpacity={0.08}
+              stroke="var(--color-primary)"
+              strokeWidth={1 / zoom}
+              strokeDasharray={`${4 / zoom} ${4 / zoom}`}
+              pointerEvents="none"
+            />
+          )}
 
           {/* Hover "+" hint for adding states on empty space */}
           {showHoverHint && (
