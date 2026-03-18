@@ -10,12 +10,13 @@
 - ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
 
 ## Other Ideas
-- Image export to clipboard
+- Image export to clipboard (currently only to file) + make the export ignore selection highlights (but keep simulation trace highlights if in simulation mode)
 - PDA (pushdown automata) support
 - NFA to DFA conversion (subset construction)
 - Turing Machine simulation
 - Moore/Mealy machines
 - Regex to NFA conversion
+- equality testing between automata (using known algorithms)
 - mobile support with a redesigned UI for touch interactions
 
 ## Maintenance Note For Claude

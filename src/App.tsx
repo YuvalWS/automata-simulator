@@ -8,7 +8,17 @@ import { useAutosave } from './hooks/use-autosave';
 import { useUnsavedWarning } from './hooks/use-unsaved-warning';
 import { useTheme } from './hooks/use-theme';
 import { useSimulationStore } from './stores/simulation-store';
+import { useAutomatonStore } from './stores/automaton-store';
+import { useEditorStore } from './stores/editor-store';
 import { MobileWarning } from './components/MobileWarning';
+
+if (import.meta.env.DEV) {
+  (window as any).__stores__ = {
+    automatonStore: useAutomatonStore,
+    editorStore: useEditorStore,
+    simulationStore: useSimulationStore,
+  };
+}
 
 export default function App() {
   useKeyboardShortcuts();
