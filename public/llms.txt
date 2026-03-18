@@ -1,0 +1,100 @@
+# Automata Simulator
+
+> A web-based visual editor and simulator for finite automata (DFA and NFA).
+> URL: https://automata.yuweiss.dev
+> Source: https://github.com/YuvalWS/automata-simulator
+
+## What This App Does
+
+Automata Simulator lets users build finite automata diagrams interactively, simulate words step-by-step with visual highlighting, and save/load their work as JSON files.
+
+Supported automaton types:
+- **DFA** (Deterministic Finite Automaton) — exactly one transition per symbol per state, no epsilon transitions
+- **NFA** (Nondeterministic Finite Automaton) — multiple transitions per symbol allowed, epsilon (ε) transitions allowed
+
+## JSON File Format
+
+The app saves and loads automata as JSON files. You can generate these files programmatically and load them into the app.
+
+### Save File Structure
+
+```json
+{
+  "version": "1.0.0",
+  "automaton": {
+    "id": "<unique string>",
+    "name": "<display name>",
+    "type": "DFA" | "NFA",
+    "alphabet": ["a", "b"],
+    "states": [ ... ],
+    "transitions": [ ... ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+### State Object
+
+```json
+{
+  "id": "<unique string>",
+  "name": "q0",
+  "position": { "x": 100, "y": 200 },
+  "isInitial": true,
+  "isAccepting": false
+}
+```
+
+### Transition Object
+
+```json
+{
+  "id": "<unique string>",
+  "sourceId": "<state id>",
+  "targetId": "<state id>",
+  "symbols": ["a", "b"]
+}
+```
+
+### Rules
+
+- Exactly one state must have `isInitial: true`
+- At least one state should have `isAccepting: true` for meaningful simulation
+- DFA: each state must have at most one transition per symbol; epsilon (ε) is not allowed
+- NFA: multiple transitions per symbol are allowed; epsilon transitions use the symbol `"ε"` (U+03B5)
+- The `alphabet` array should contain all symbols used in transitions (excluding ε)
+- All `sourceId` and `targetId` values must reference existing state `id` values
+- `viewport.zoom` must be a positive number
+- Self-loops: set `sourceId` equal to `targetId`
+
+## Example: DFA that accepts strings ending with "ab"
+
+```json
+{
+  "version": "1.0.0",
+  "automaton": {
+    "id": "example-dfa",
+    "name": "Ends with ab",
+    "type": "DFA",
+    "alphabet": ["a", "b"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true, "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 300, "y": 200 }, "isInitial": false, "isAccepting": false },
+      { "id": "s2", "name": "q2", "position": { "x": 500, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t1", "sourceId": "s0", "targetId": "s0", "symbols": ["b"] },
+      { "id": "t2", "sourceId": "s1", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t3", "sourceId": "s1", "targetId": "s2", "symbols": ["b"] },
+      { "id": "t4", "sourceId": "s2", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t5", "sourceId": "s2", "targetId": "s0", "symbols": ["b"] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## Detailed docs
+
+For full schema definitions and more examples, see: https://automata.yuweiss.dev/llms-full.txt

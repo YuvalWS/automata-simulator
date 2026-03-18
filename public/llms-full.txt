@@ -1,0 +1,218 @@
+# Automata Simulator — Full LLM Reference
+
+> A web-based visual editor and simulator for finite automata (DFA and NFA).
+> URL: https://automata.yuweiss.dev
+> Source: https://github.com/YuvalWS/automata-simulator
+> Summary: https://automata.yuweiss.dev/llms.txt
+
+## JSON Schema (Zod Definitions)
+
+The app validates loaded files using these Zod schemas:
+
+```typescript
+const PointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+
+const ViewportSchema = z.object({
+  panX: z.number(),
+  panY: z.number(),
+  zoom: z.number().positive(),  // must be > 0
+});
+
+const AutomatonStateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  position: PointSchema,
+  isInitial: z.boolean(),
+  isAccepting: z.boolean(),
+});
+
+const TransitionSchema = z.object({
+  id: z.string().min(1),
+  sourceId: z.string().min(1),
+  targetId: z.string().min(1),
+  symbols: z.array(z.string()),
+  controlPointOffset: PointSchema.optional(),
+});
+
+const AutomatonSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  type: z.enum(['DFA', 'NFA']),
+  alphabet: z.array(z.string()),
+  states: z.array(AutomatonStateSchema),
+  transitions: z.array(TransitionSchema),
+  viewport: ViewportSchema,
+});
+
+const SaveFileSchema = z.object({
+  version: z.string(),
+  automaton: AutomatonSchema,
+});
+```
+
+## Field Reference
+
+### SaveFile
+| Field | Type | Description |
+|-------|------|-------------|
+| version | string | File format version, currently `"1.0.0"` |
+| automaton | Automaton | The automaton data |
+
+### Automaton
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string (min 1) | Unique identifier for the automaton |
+| name | string (min 1) | Display name shown in the UI |
+| type | `"DFA"` or `"NFA"` | Automaton type |
+| alphabet | string[] | List of input symbols (excluding ε) |
+| states | State[] | Array of states |
+| transitions | Transition[] | Array of transitions |
+| viewport | Viewport | Camera position and zoom level |
+
+### State
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string (min 1) | Unique identifier |
+| name | string (min 1) | Display label (e.g., "q0", "q1") |
+| position | {x, y} | Canvas coordinates for visual layout |
+| isInitial | boolean | Whether this is the start state (exactly one should be true) |
+| isAccepting | boolean | Whether this is an accepting/final state |
+
+### Transition
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string (min 1) | Unique identifier |
+| sourceId | string (min 1) | ID of the source state |
+| targetId | string (min 1) | ID of the target state (same as sourceId for self-loops) |
+| symbols | string[] | Symbols that trigger this transition |
+| controlPointOffset | {x, y}? | Optional offset for curved rendering |
+
+### Viewport
+| Field | Type | Description |
+|-------|------|-------------|
+| panX | number | Horizontal pan offset |
+| panY | number | Vertical pan offset |
+| zoom | number (> 0) | Zoom level (1.0 = 100%) |
+
+## Validation Rules
+
+### DFA-specific rules
+- Each state must have at most one transition per input symbol (no nondeterminism)
+- Epsilon transitions (`"ε"`, U+03B5) are not allowed
+- Ideally, every state has a transition for every symbol in the alphabet (the app warns about missing transitions)
+
+### NFA-specific rules
+- Multiple transitions from the same state on the same symbol are allowed
+- Epsilon transitions are allowed — use the symbol `"ε"` (U+03B5)
+- During simulation, epsilon-closure is computed automatically
+
+### General rules
+- Exactly one state must have `isInitial: true`
+- All `sourceId` and `targetId` must reference valid state IDs
+- The `alphabet` array should list all symbols used in transitions (ε is excluded from the alphabet)
+- IDs must be non-empty strings (UUIDs are commonly used but any non-empty string works)
+
+## Layout Tips
+
+When generating automata for visual display:
+- Space states ~200px apart horizontally for readability
+- A typical Y coordinate is 200-300 for a single row
+- For multi-row layouts, use ~200px vertical spacing
+- The viewport `{ panX: 0, panY: 0, zoom: 1 }` is a good default
+- State names conventionally use "q0", "q1", "q2", etc.
+
+## Example 1: DFA that accepts strings ending with "ab"
+
+```json
+{
+  "version": "1.0.0",
+  "automaton": {
+    "id": "dfa-ends-ab",
+    "name": "Ends with ab",
+    "type": "DFA",
+    "alphabet": ["a", "b"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true, "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 300, "y": 200 }, "isInitial": false, "isAccepting": false },
+      { "id": "s2", "name": "q2", "position": { "x": 500, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t1", "sourceId": "s0", "targetId": "s0", "symbols": ["b"] },
+      { "id": "t2", "sourceId": "s1", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t3", "sourceId": "s1", "targetId": "s2", "symbols": ["b"] },
+      { "id": "t4", "sourceId": "s2", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t5", "sourceId": "s2", "targetId": "s0", "symbols": ["b"] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## Example 2: NFA with epsilon transitions (accepts "a*b*")
+
+```json
+{
+  "version": "1.0.0",
+  "automaton": {
+    "id": "nfa-a-star-b-star",
+    "name": "a*b* (NFA with ε)",
+    "type": "NFA",
+    "alphabet": ["a", "b"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true, "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 300, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s0", "symbols": ["a"] },
+      { "id": "t1", "sourceId": "s0", "targetId": "s1", "symbols": ["ε"] },
+      { "id": "t2", "sourceId": "s1", "targetId": "s1", "symbols": ["b"] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## Example 3: DFA with self-loop (accepts even number of a's)
+
+```json
+{
+  "version": "1.0.0",
+  "automaton": {
+    "id": "dfa-even-a",
+    "name": "Even number of a's",
+    "type": "DFA",
+    "alphabet": ["a", "b"],
+    "states": [
+      { "id": "s0", "name": "even", "position": { "x": 100, "y": 200 }, "isInitial": true, "isAccepting": true },
+      { "id": "s1", "name": "odd", "position": { "x": 350, "y": 200 }, "isInitial": false, "isAccepting": false }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": ["a"] },
+      { "id": "t1", "sourceId": "s0", "targetId": "s0", "symbols": ["b"] },
+      { "id": "t2", "sourceId": "s1", "targetId": "s0", "symbols": ["a"] },
+      { "id": "t3", "sourceId": "s1", "targetId": "s1", "symbols": ["b"] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## How to Use Generated JSON
+
+1. Save the JSON to a `.json` file
+2. Open https://automata.yuweiss.dev
+3. Click "Load" (or press Ctrl+O) and select the file
+4. The automaton will render with all states, transitions, and layout preserved
+
+## Describing Automata in Natural Language
+
+When asked to explain an automaton JSON file:
+1. Identify the type (DFA/NFA) and the alphabet
+2. Identify the initial state and accepting state(s)
+3. Describe the transition function (which symbols move between which states)
+4. Describe the language the automaton accepts in set-builder notation or plain English
+5. Note any self-loops and their purpose
