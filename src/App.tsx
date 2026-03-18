@@ -8,6 +8,7 @@ import { useAutosave } from './hooks/use-autosave';
 import { useUnsavedWarning } from './hooks/use-unsaved-warning';
 import { useTheme } from './hooks/use-theme';
 import { useSimulationStore } from './stores/simulation-store';
+import { MobileWarning } from './components/MobileWarning';
 
 export default function App() {
   useKeyboardShortcuts();
@@ -25,6 +26,7 @@ export default function App() {
         {isSimulating ? <SimulationPanel /> : <PropertiesPanel />}
       </div>
       <ShortcutsTooltip />
+      <MobileWarning />
     </div>
   );
 }

@@ -29,6 +29,7 @@ export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, 
     <g
       className={className}
       data-testid={`transition-${transition.id}`}
+      onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => onClick(e, transition.id)}
       onDoubleClick={(e) => onDoubleClick(e, transition.id)}
       style={{ cursor: 'pointer' }}
@@ -38,7 +39,7 @@ export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, 
         d={edgePath.path}
         fill="none"
         stroke="transparent"
-        strokeWidth={12}
+        strokeWidth={32}
       />
       {/* Visible path */}
       <path
@@ -47,6 +48,14 @@ export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, 
         stroke={strokeColor}
         strokeWidth={strokeWidth}
         markerEnd="url(#arrowhead)"
+      />
+      {/* Invisible wider label hit area */}
+      <rect
+        x={edgePath.labelPosition.x - edgePath.labelWidth / 2 - 8}
+        y={edgePath.labelPosition.y - 14}
+        width={edgePath.labelWidth + 16}
+        height={28}
+        fill="transparent"
       />
       {/* Label background */}
       <rect

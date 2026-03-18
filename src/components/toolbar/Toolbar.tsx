@@ -2,7 +2,7 @@ import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
-import { saveToJsonFile, loadFromJsonFile } from '@/services/serialization/file-io';
+import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
 import { clearAutosave } from '@/hooks/use-autosave';
 import { useTheme } from '@/hooks/use-theme';
 import { computeFitViewport } from '@/utils/fit-viewport';
@@ -34,6 +34,7 @@ export function Toolbar() {
     }
     newAutomaton();
     clearAutosave();
+    clearFileHandle();
     setDirty(false);
   };
 

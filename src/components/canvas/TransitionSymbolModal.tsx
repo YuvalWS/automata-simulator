@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { EPSILON } from '@/models/epsilon';
+import { useAutomatonStore } from '@/stores/automaton-store';
+import { AutomatonType } from '@/models/types';
 import './TransitionSymbolModal.css';
 
 interface TransitionSymbolModalProps {
@@ -11,6 +14,7 @@ interface TransitionSymbolModalProps {
 export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCancel }: TransitionSymbolModalProps) {
   const [value, setValue] = useState(initialSymbols?.join(', ') ?? '');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isDFA = useAutomatonStore((s) => s.automaton.type) === AutomatonType.DFA;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -48,16 +52,27 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
         <div className="symbol-modal-title">
           {initialSymbols ? 'Edit Transition Symbols' : 'Enter Transition Symbols'}
         </div>
-        <input
-          ref={inputRef}
-          type="text"
-          className="symbol-modal-input"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="a, b, c"
-        />
-        <div className="symbol-modal-hint">Comma-separated. Press Enter to confirm, Esc to cancel.</div>
+        <div className="symbol-modal-input-row">
+          <input
+            ref={inputRef}
+            type="text"
+            className="symbol-modal-input"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={'a, b, ' + EPSILON}
+          />
+          <button
+            type="button"
+            className="symbol-modal-btn epsilon"
+            onClick={() => setValue((v) => v.trim() ? `${v}, ${EPSILON}` : EPSILON)}
+            disabled={isDFA}
+            title={isDFA ? 'Epsilon transitions are not allowed in DFA' : 'Add epsilon (' + EPSILON + ') transition'}
+          >
+            {'\u03B5'}
+          </button>
+        </div>
+        <div className="symbol-modal-hint">{'Comma-separated. Use ' + EPSILON + ' for epsilon transitions. Enter to confirm.'}</div>
         <div className="symbol-modal-actions">
           <button className="symbol-modal-btn cancel" onClick={onCancel}>Cancel</button>
           <button className="symbol-modal-btn confirm" onClick={handleSubmit}>Confirm</button>

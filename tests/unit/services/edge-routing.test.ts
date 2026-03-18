@@ -101,7 +101,7 @@ describe('edge-routing', () => {
       expect(selfLoop.labelPosition.x).toBeLessThan(100);
     });
 
-    it('defaults self-loop to top when no other edges', () => {
+    it('defaults self-loop to top when no other edges (non-initial)', () => {
       const states = [makeState('q0', 200, 200)];
       const transitions = [makeTransition('t1', 'q0', 'q0', ['a'])];
       const paths = computeEdgePaths(states, transitions);
@@ -109,6 +109,33 @@ describe('edge-routing', () => {
 
       // Default top: label y should be above state y (200)
       expect(selfLoop.labelPosition.y).toBeLessThan(200);
+    });
+
+    it('self-loop on initial state avoids left side (initial arrow direction)', () => {
+      const states = [makeState('q0', 200, 200, { isInitial: true })];
+      const transitions = [makeTransition('t1', 'q0', 'q0', ['a'])];
+      const paths = computeEdgePaths(states, transitions);
+      const selfLoop = paths[0]!;
+
+      // Initial arrow comes from the left (angle π), so self-loop should go right (label x > 200)
+      expect(selfLoop.labelPosition.x).toBeGreaterThan(200);
+    });
+
+    it('self-loop on initial state with edge going right goes up', () => {
+      const states = [
+        makeState('q0', 200, 200, { isInitial: true }),
+        makeState('q1', 400, 200),
+      ];
+      const transitions = [
+        makeTransition('t1', 'q0', 'q1', ['a']),
+        makeTransition('t2', 'q0', 'q0', ['b']),
+      ];
+      const paths = computeEdgePaths(states, transitions);
+      const selfLoop = paths.find((p) => p.isSelfLoop)!;
+
+      // Initial arrow from left (π) + edge going right (0) → avg is left → self-loop goes right
+      // The self-loop should NOT be clearly on the left side
+      expect(selfLoop.labelPosition.x).toBeGreaterThan(190);
     });
 
     it('positions self-loop below when neighbor is above', () => {

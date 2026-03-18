@@ -1,23 +1,34 @@
 import { create } from 'zustand';
 import { EditorTool } from '@/models/types';
 import type { Selection } from '@/models/types';
+import type { Point } from '@/models/geometry';
 
 interface PendingTransitionSource {
   stateId: string;
   timestamp: number;
 }
 
+interface SelectionBox {
+  start: Point;
+  end: Point;
+}
+
 interface EditorStore {
   tool: EditorTool;
-  selection: Selection | null;
+  selection: Selection[];
   drawingTransition: { sourceId: string; mousePos: { x: number; y: number } } | null;
   isDirty: boolean;
   placingNewState: boolean;
   pendingTransitionSource: PendingTransitionSource | null;
+  selectionBox: SelectionBox | null;
 
   setTool: (tool: EditorTool) => void;
-  setSelection: (selection: Selection | null) => void;
+  setSelection: (selection: Selection | Selection[]) => void;
+  addToSelection: (item: Selection) => void;
+  removeFromSelection: (id: string) => void;
+  toggleInSelection: (item: Selection) => void;
   clearSelection: () => void;
+  setSelectionBox: (box: SelectionBox | null) => void;
   startDrawingTransition: (sourceId: string, mousePos: { x: number; y: number }) => void;
   updateDrawingTransition: (mousePos: { x: number; y: number }) => void;
   stopDrawingTransition: () => void;
@@ -29,15 +40,33 @@ interface EditorStore {
 
 export const useEditorStore = create<EditorStore>((set) => ({
   tool: EditorTool.Pointer,
-  selection: null,
+  selection: [],
   drawingTransition: null,
   isDirty: false,
   placingNewState: false,
   pendingTransitionSource: null,
+  selectionBox: null,
 
-  setTool: (tool) => set({ tool, selection: null }),
-  setSelection: (selection) => set({ selection }),
-  clearSelection: () => set({ selection: null }),
+  setTool: (tool) => set({ tool, selection: [] }),
+  setSelection: (selection) =>
+    set({ selection: Array.isArray(selection) ? selection : [selection] }),
+  addToSelection: (item) =>
+    set((s) => {
+      if (s.selection.some((sel) => sel.id === item.id)) return s;
+      return { selection: [...s.selection, item] };
+    }),
+  removeFromSelection: (id) =>
+    set((s) => ({ selection: s.selection.filter((sel) => sel.id !== id) })),
+  toggleInSelection: (item) =>
+    set((s) => {
+      const exists = s.selection.some((sel) => sel.id === item.id);
+      if (exists) {
+        return { selection: s.selection.filter((sel) => sel.id !== item.id) };
+      }
+      return { selection: [...s.selection, item] };
+    }),
+  clearSelection: () => set({ selection: [] }),
+  setSelectionBox: (box) => set({ selectionBox: box }),
   startDrawingTransition: (sourceId, mousePos) =>
     set({ drawingTransition: { sourceId, mousePos } }),
   updateDrawingTransition: (mousePos) =>

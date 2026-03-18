@@ -7,11 +7,13 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Interactive diagram editor** — drag states to reposition, scroll to zoom, drag canvas to pan
 - **Word simulation** — step-by-step DFA/NFA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
 - **Batch simulation** — test multiple words at once, see accept/reject results for each
-- **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state
+- **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state; suggests switching to NFA when conflicts are found
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA & NFA support** — toggle between deterministic and nondeterministic modes
+- **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
-- **Smart self-loop placement** — self-loops automatically position away from connected edges
+- **Smart self-loop placement** — self-loops automatically position away from connected edges and the initial arrow
+- **Smart edge routing** — fan-out edges from the same state are offset to avoid overlap
 - **Snap-to-alignment** — states snap to horizontal/vertical alignment when dragged near other states, with visual guide lines
 - **New diagram with q0** — new automata start with an initial state already placed
 - **Hover "+" hint** — hover on empty canvas to see a placement hint; click to add a state
@@ -19,25 +21,28 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Zoom controls** — scroll to zoom + toolbar +/- buttons with percentage display + fit-to-content
 - **Dark mode** — toggle between light and dark themes; respects system preference
 - **PNG export** — export the diagram as a high-resolution PNG image
-- **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport)
+- **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport); re-saves to same file (Chromium)
 - **Auto-save** — current state automatically saved to browser storage; restored on page reload
 - **Unsaved changes warning** — browser warns before closing tab with unsaved work
 - **Undo/Redo** — full undo/redo history (Ctrl+Z / Ctrl+Shift+Z)
 - **Properties panel** — edit state names, toggle initial/accepting, modify transition symbols
 - **Styled transition editor** — custom modal for entering/editing transition symbols (no browser prompts)
-- **Intuitive interactions** — click two states to create a transition; double-click for self-loop; drag handle on hover
-- **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts and instructions; auto-opens on first visit
+- **Intuitive interactions** — click two states to create a transition; double-click for self-loop; drag handle on hover; drag handle to empty space to create a state + transition
+- **Multi-select** — Shift+click to toggle states in selection; Shift+drag on canvas for rubber-band selection; group drag moves all selected states together
+- **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts, instructions, and credits; auto-opens on first visit
+- **Mobile warning** — displays a message on small screens (< 768px) that the app requires a desktop browser
 
 ## How to Use
 
 1. **Add states** — click "+ New State" in the toolbar (or press N), then click on the canvas to place
 2. **Create transitions** — click a source state, then click a target state within 3 seconds
 3. **Create self-loops** — double-click a state
-4. **Drag-to-connect** — hover over a state to reveal the arrow handle, drag it to another state
+4. **Drag-to-connect** — hover over a state to reveal the arrow handle, drag it to another state (or to empty space to create a new state)
 5. **Edit transition symbols** — double-click any transition to edit its symbols
 6. **Edit properties** — click any state or transition to see its properties in the right panel
 7. **Move states** — drag states to reposition (they snap to alignment with other states)
-8. **Delete** — select an element and press Delete or Backspace
+8. **Multi-select** — Shift+click states to add/remove from selection; Shift+drag on canvas for rubber-band selection; drag moves all selected states
+9. **Delete** — select element(s) and press Delete or Backspace
 9. **Undo/Redo** — Ctrl+Z to undo, Ctrl+Shift+Z to redo
 10. **Save** — click "Save" or press Ctrl+S
 11. **Load** — click "Load" or press Ctrl+O and select a JSON file
@@ -56,10 +61,12 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 | Key | Action |
 |-----|--------|
 | N | New State (click canvas to place) |
-| Delete / Backspace | Delete selected element |
+| Space | Toggle accepting (when state selected) |
+| Delete / Backspace | Delete selected element(s) |
 | Escape | Cancel / Exit simulation |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
+| Ctrl+A | Select all states |
 | Ctrl+S | Save to file |
 | Ctrl+O | Load from file |
 | Ctrl+N | New automaton |
@@ -114,7 +121,7 @@ src/
 ├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning, theme
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 193 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 207 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -127,5 +134,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (193 unit tests)
+- Vitest for tests (205 unit tests)
 - Docker + Express for deployment

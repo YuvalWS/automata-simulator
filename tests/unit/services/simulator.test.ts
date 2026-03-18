@@ -589,3 +589,215 @@ describe('trace structure integrity', () => {
     expect(trace.word).toEqual(['x', 'y', 'z']);
   });
 });
+
+describe('NFA with epsilon transitions', () => {
+  const EPS = '\u03B5';
+
+  it('accepts empty word via simple epsilon chain', () => {
+    // q0 --ε--> q1 --ε--> q2(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, []);
+    expect(trace.snapshots).toHaveLength(1);
+    expect(trace.snapshots[0]!.status).toBe('accepted');
+    // Epsilon closure should include all three states
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q0');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q1');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q2');
+  });
+
+  it('accepts word via epsilon closure at start', () => {
+    // q0 --ε--> q1 --a--> q2(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: ['a'] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(last(trace.snapshots).status).toBe('accepted');
+    // Step 0 should have {q0, q1} from epsilon closure
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q0');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q1');
+  });
+
+  it('handles epsilon cycles without infinite loop', () => {
+    // q0 --ε--> q1, q1 --ε--> q0, q1 --a--> q2(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't2', sourceId: 'q1', targetId: 'q0', symbols: [EPS] },
+        { id: 't3', sourceId: 'q1', targetId: 'q2', symbols: ['a'] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(last(trace.snapshots).status).toBe('accepted');
+    expect(last(trace.snapshots).activeStateIds).toContain('q2');
+  });
+
+  it('applies epsilon closure after consuming a symbol', () => {
+    // q0 --a--> q1, q1 --ε--> q2(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(last(trace.snapshots).status).toBe('accepted');
+    // After consuming 'a', epsilon closure gives {q1, q2}
+    expect(last(trace.snapshots).activeStateIds).toContain('q1');
+    expect(last(trace.snapshots).activeStateIds).toContain('q2');
+  });
+
+  it('handles multiple epsilon paths from initial state', () => {
+    // q0 --ε--> q1, q0 --ε--> q2, q1 --a--> q3(accept), q2 --b--> q3(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a', 'b'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 100, y: 100 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 200, y: 50 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't2', sourceId: 'q0', targetId: 'q2', symbols: [EPS] },
+        { id: 't3', sourceId: 'q1', targetId: 'q3', symbols: ['a'] },
+        { id: 't4', sourceId: 'q2', targetId: 'q3', symbols: ['b'] },
+      ],
+    });
+    expect(lastStatus(auto, ['a'])).toBe('accepted');
+    expect(lastStatus(auto, ['b'])).toBe('accepted');
+    expect(lastStatus(auto, ['a', 'b'])).toBe('rejected');
+  });
+
+  it('backward compatible — NFA without epsilon works unchanged', () => {
+    // Standard NFA: q0 --a--> q1(accept), q0 --a--> q2
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        { id: 'q2', name: 'q2', position: { x: 100, y: 100 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q0', targetId: 'q2', symbols: ['a'] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(last(trace.snapshots).status).toBe('accepted');
+    expect(last(trace.snapshots).activeStateIds).toContain('q1');
+    expect(last(trace.snapshots).activeStateIds).toContain('q2');
+  });
+
+  it('textbook NFA-ε for (a|b)*abb', () => {
+    // Classic NFA-ε that recognizes strings ending in "abb"
+    // q0 --ε--> q1, q1 --a,b--> q1, q1 --a--> q2, q2 --b--> q3, q3 --b--> q4(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a', 'b'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 300, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q4', name: 'q4', position: { x: 400, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't0', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't1', sourceId: 'q1', targetId: 'q1', symbols: ['a', 'b'] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: ['a'] },
+        { id: 't3', sourceId: 'q2', targetId: 'q3', symbols: ['b'] },
+        { id: 't4', sourceId: 'q3', targetId: 'q4', symbols: ['b'] },
+      ],
+    });
+    expect(lastStatus(auto, ['a', 'b', 'b'])).toBe('accepted');
+    expect(lastStatus(auto, ['a', 'a', 'b', 'b'])).toBe('accepted');
+    expect(lastStatus(auto, ['b', 'a', 'b', 'b'])).toBe('accepted');
+    expect(lastStatus(auto, ['a', 'b', 'a'])).toBe('rejected');
+    expect(lastStatus(auto, ['a', 'b'])).toBe('rejected');
+    expect(lastStatus(auto, [])).toBe('rejected');
+  });
+
+  it('epsilon-only path to acceptance with dead branch on symbol', () => {
+    // q0 --ε--> q1 --ε--> q2(accept), q0 --a--> q3(not accepting)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+        { id: 'q3', name: 'q3', position: { x: 100, y: 100 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [EPS] },
+        { id: 't3', sourceId: 'q0', targetId: 'q3', symbols: ['a'] },
+      ],
+    });
+    expect(lastStatus(auto, [])).toBe('accepted');
+    expect(lastStatus(auto, ['a'])).toBe('rejected');
+  });
+
+  it('includes epsilon transition IDs in traversed transitions', () => {
+    // q0 --ε--> q1 --a--> q2, q2 --ε--> q3(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 300, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 'eps1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 'ta', sourceId: 'q1', targetId: 'q2', symbols: ['a'] },
+        { id: 'eps2', sourceId: 'q2', targetId: 'q3', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    // Step 0: epsilon closure includes eps1
+    expect(trace.snapshots[0]!.traversedTransitionIds).toContain('eps1');
+    // Step 1 (after 'a'): includes ta and eps2
+    expect(trace.snapshots[1]!.traversedTransitionIds).toContain('ta');
+    expect(trace.snapshots[1]!.traversedTransitionIds).toContain('eps2');
+    expect(last(trace.snapshots).status).toBe('accepted');
+  });
+});

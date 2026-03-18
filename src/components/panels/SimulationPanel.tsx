@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
+import { AutomatonType } from '@/models/types';
 import { generateRandomWord } from '@/utils/random-word';
 import './SimulationPanel.css';
 
@@ -31,6 +32,18 @@ export function SimulationPanel() {
   const clearBatchResults = useSimulationStore((s) => s.clearBatchResults);
 
   const alphabet = useAutomatonStore((s) => s.automaton.alphabet);
+  const setType = useAutomatonStore((s) => s.setType);
+  const reenterSimulation = useSimulationStore((s) => s.enterSimulation);
+
+  const handleAction = useCallback(
+    (key: string) => {
+      if (key === 'switch-nfa') {
+        setType(AutomatonType.NFA);
+        reenterSimulation();
+      }
+    },
+    [setType, reenterSimulation],
+  );
   const snapshot = getCurrentSnapshot(useSimulationStore.getState());
   const hasErrors = validationMessages.some((m) => m.type === 'error');
 
@@ -82,7 +95,7 @@ export function SimulationPanel() {
                 className="sim-btn sim-btn-random"
                 onClick={() => setWordInput(generateRandomWord(alphabet).join(','))}
                 disabled={!!trace || alphabet.length === 0}
-                title="Generate random word"
+                title={alphabet.length === 0 ? 'No alphabet defined — add transitions with symbols first' : 'Generate random word'}
               >
                 Random
               </button>
@@ -139,8 +152,21 @@ export function SimulationPanel() {
             <div key={i} className={`sim-msg sim-msg-${msg.type}`}>
               <span className="sim-msg-icon">{msg.type === 'error' ? '\u2716' : '\u26A0'}</span>
               {msg.message}
+              {msg.action && (
+                <button
+                  className="sim-msg-action"
+                  onClick={() => handleAction(msg.action!.key)}
+                >
+                  {msg.action.label}
+                </button>
+              )}
             </div>
           ))}
+          {alphabet.length === 0 && (
+            <button className="sim-btn sim-btn-secondary sim-btn-back" onClick={exitSimulation}>
+              Back to Editing
+            </button>
+          )}
         </div>
       )}
 

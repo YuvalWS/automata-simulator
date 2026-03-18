@@ -1,5 +1,6 @@
 import type { Automaton } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
+import { EPSILON } from '@/models/epsilon';
 
 export interface SimulationSnapshot {
   step: number;
@@ -12,6 +13,35 @@ export interface SimulationSnapshot {
 export interface SimulationTrace {
   word: string[];
   snapshots: SimulationSnapshot[];
+}
+
+/**
+ * Compute the epsilon closure of a set of states.
+ * Returns all states reachable via ε-transitions (including the input states),
+ * and the IDs of ε-transitions traversed.
+ */
+export function epsilonClosure(
+  automaton: Automaton,
+  stateIds: string[],
+): { stateIds: string[]; transitionIds: string[] } {
+  const visited = new Set<string>(stateIds);
+  const queue = [...stateIds];
+  const transitionIds: string[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.pop()!;
+    for (const t of automaton.transitions) {
+      if (t.sourceId === current && t.symbols.includes(EPSILON)) {
+        if (!visited.has(t.targetId)) {
+          visited.add(t.targetId);
+          queue.push(t.targetId);
+        }
+        transitionIds.push(t.id);
+      }
+    }
+  }
+
+  return { stateIds: [...visited], transitionIds: [...new Set(transitionIds)] };
 }
 
 export function buildSimulationTrace(automaton: Automaton, word: string[]): SimulationTrace {
@@ -84,9 +114,12 @@ function buildNfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
   }
 
   const snapshots: SimulationSnapshot[] = [];
-  let activeStateIds = initialStates.map((s) => s.id);
 
-  // Step 0: initial states
+  // Apply epsilon closure to initial states
+  const initClosure = epsilonClosure(automaton, initialStates.map((s) => s.id));
+  let activeStateIds = initClosure.stateIds;
+
+  // Step 0: initial states + epsilon closure
   if (word.length === 0) {
     const anyAccepting = activeStateIds.some(
       (id) => automaton.states.find((s) => s.id === id)?.isAccepting,
@@ -95,7 +128,7 @@ function buildNfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
       step: 0,
       symbolIndex: -1,
       activeStateIds: [...activeStateIds],
-      traversedTransitionIds: [],
+      traversedTransitionIds: [...initClosure.transitionIds],
       status: anyAccepting ? 'accepted' : 'rejected',
     });
     return { word, snapshots };
@@ -105,7 +138,7 @@ function buildNfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
     step: 0,
     symbolIndex: -1,
     activeStateIds: [...activeStateIds],
-    traversedTransitionIds: [],
+    traversedTransitionIds: [...initClosure.transitionIds],
     status: 'running',
   });
 
@@ -123,7 +156,10 @@ function buildNfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
       }
     }
 
-    activeStateIds = [...nextStateIds];
+    // Apply epsilon closure to the states reached by consuming the symbol
+    const closure = epsilonClosure(automaton, [...nextStateIds]);
+    activeStateIds = closure.stateIds;
+    traversedIds.push(...closure.transitionIds);
 
     if (activeStateIds.length === 0) {
       snapshots.push({
