@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { EPSILON } from '@/models/epsilon';
+import { useAutomatonStore } from '@/stores/automaton-store';
+import { AutomatonType } from '@/models/types';
 import './TransitionSymbolModal.css';
 
 interface TransitionSymbolModalProps {
@@ -12,6 +14,7 @@ interface TransitionSymbolModalProps {
 export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCancel }: TransitionSymbolModalProps) {
   const [value, setValue] = useState(initialSymbols?.join(', ') ?? '');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isDFA = useAutomatonStore((s) => s.automaton.type) === AutomatonType.DFA;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -63,7 +66,8 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
             type="button"
             className="symbol-modal-btn epsilon"
             onClick={() => setValue((v) => v.trim() ? `${v}, ${EPSILON}` : EPSILON)}
-            title={'Add epsilon (' + EPSILON + ') transition'}
+            disabled={isDFA}
+            title={isDFA ? 'Epsilon transitions are not allowed in DFA' : 'Add epsilon (' + EPSILON + ') transition'}
           >
             {'\u03B5'}
           </button>

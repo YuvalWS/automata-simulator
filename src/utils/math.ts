@@ -51,3 +51,13 @@ export function circleIntersection(from: Point, _to: Point, center: Point, radiu
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+
+/** Shortest distance from point `p` to line segment `a`→`b`. */
+export function pointToSegmentDist(p: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return distance(p, a);
+  const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq, 0, 1);
+  return distance(p, { x: a.x + t * dx, y: a.y + t * dy });
+}

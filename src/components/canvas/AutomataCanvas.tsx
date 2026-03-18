@@ -13,6 +13,7 @@ import { GridBackground } from './GridBackground';
 import { TransitionSymbolModal } from './TransitionSymbolModal';
 import { useHistoryStore } from '@/stores/history-store';
 import { snapToAlignment, computeSnapGuides } from '@/utils/snap';
+import { pointToSegmentDist } from '@/utils/math';
 import type { SnapGuide } from '@/utils/snap';
 import './AutomataCanvas.css';
 
@@ -113,7 +114,7 @@ export function AutomataCanvas() {
       // During simulation, only allow panning
       if (simIsActive) {
         const target = e.target as SVGElement;
-        const isCanvas = target === svgRef.current || target.tagName === 'rect';
+        const isCanvas = target === svgRef.current || (target as unknown as HTMLElement).dataset?.canvasBg === 'true';
         if (isCanvas) {
           setIsPanning(true);
           panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
@@ -122,7 +123,7 @@ export function AutomataCanvas() {
       }
 
       const target = e.target as SVGElement;
-      const isCanvas = target === svgRef.current || target.tagName === 'rect';
+      const isCanvas = target === svgRef.current || (target as unknown as HTMLElement).dataset?.canvasBg === 'true';
 
       if (placingNewState && isCanvas) {
         const point = getSvgPoint(e.clientX, e.clientY);
@@ -141,6 +142,7 @@ export function AutomataCanvas() {
           clearSelection();
           setPendingTransitionSource(null);
           setIsPanning(true);
+          mouseDownPos.current = { x: e.clientX, y: e.clientY };
           panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
         }
       }
@@ -230,15 +232,40 @@ export function AutomataCanvas() {
         }
       }
       setHandleHover(nearestState ? { stateId: nearestState.id, angle: nearestState.angle } : null);
-      setHoverPoint(nearestState ? null : svgPoint);
+
+      // Suppress "+" hint when near a transition edge
+      let nearTransition = false;
+      if (!nearestState) {
+        const stateMap = new Map(automaton.states.map((s) => [s.id, s.position]));
+        for (const t of automaton.transitions) {
+          const src = stateMap.get(t.sourceId);
+          const tgt = stateMap.get(t.targetId);
+          if (src && tgt && t.sourceId !== t.targetId) {
+            if (pointToSegmentDist(svgPoint, src, tgt) < 20) {
+              nearTransition = true;
+              break;
+            }
+          }
+        }
+      }
+      setHoverPoint(nearestState || nearTransition ? null : svgPoint);
     },
-    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, getSvgPoint, setViewport, setSelectionBox, setSelection, updateDrawingTransition, zoom, automaton.states, moveState],
+    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, getSvgPoint, setViewport, setSelectionBox, setSelection, updateDrawingTransition, zoom, automaton.states, automaton.transitions, moveState],
   );
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
       if (isPanning) {
         setIsPanning(false);
+        // If the user barely moved the mouse and the "+" hint is visible, treat as click-to-add
+        if (mouseDownPos.current && !simIsActive && hoverPoint) {
+          const dx = e.clientX - mouseDownPos.current.x;
+          const dy = e.clientY - mouseDownPos.current.y;
+          if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) {
+            addState(hoverPoint);
+          }
+        }
+        mouseDownPos.current = null;
         return;
       }
 
@@ -462,17 +489,6 @@ export function AutomataCanvas() {
     setSymbolModal(null);
   }, []);
 
-  const handleAddHintClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (hoverPoint) {
-        addState(hoverPoint);
-        setHoverPoint(null);
-      }
-    },
-    [hoverPoint, addState],
-  );
-
   const handleCanvasMouseLeave = useCallback(() => {
     setHoverPoint(null);
   }, []);
@@ -517,7 +533,7 @@ export function AutomataCanvas() {
         data-testid="automata-canvas"
       >
         <GridBackground />
-        <rect width="100%" height="100%" fill="url(#grid)" />
+        <rect width="100%" height="100%" fill="url(#grid)" data-canvas-bg="true" />
 
         <defs>
           <marker
@@ -633,7 +649,7 @@ export function AutomataCanvas() {
 
           {/* Hover "+" hint for adding states on empty space */}
           {showHoverHint && (
-            <g className="canvas-add-hint" onClick={handleAddHintClick}>
+            <g className="canvas-add-hint" pointerEvents="none">
               <circle
                 cx={hoverPoint.x}
                 cy={hoverPoint.y}
@@ -650,7 +666,6 @@ export function AutomataCanvas() {
                 fontWeight="bold"
                 fill="var(--color-primary)"
                 opacity={0.5}
-                pointerEvents="none"
               >
                 +
               </text>

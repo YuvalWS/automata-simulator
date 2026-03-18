@@ -26,10 +26,14 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
   }
 
   if (automaton.type === AutomatonType.DFA) {
-    // Warn if DFA has epsilon transitions
+    // Error if DFA has epsilon transitions
     const hasEpsilon = automaton.transitions.some((t) => t.symbols.includes(EPSILON));
     if (hasEpsilon) {
-      messages.push({ type: 'warning', message: 'DFA should not have \u03B5-transitions.' });
+      messages.push({
+        type: 'error',
+        message: 'DFA cannot have \u03B5-transitions.',
+        action: { label: 'Switch to NFA', key: 'switch-nfa' },
+      });
     }
 
     // Check for symbol conflicts: multiple transitions from same state on same symbol

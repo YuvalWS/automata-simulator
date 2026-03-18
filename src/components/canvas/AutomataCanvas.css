@@ -41,15 +41,9 @@
   stroke-width: 3;
 }
 
-/* Hover "+" hint for adding states */
+/* Hover "+" hint for adding states (visual only, non-interactive) */
 .canvas-add-hint {
-  pointer-events: all;
-  cursor: pointer;
   transition: opacity 0.15s;
-}
-
-.canvas-add-hint:hover circle {
-  r: 14;
 }
 
 /* Simulation state highlights */

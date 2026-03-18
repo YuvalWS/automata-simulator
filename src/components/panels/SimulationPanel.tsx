@@ -95,7 +95,7 @@ export function SimulationPanel() {
                 className="sim-btn sim-btn-random"
                 onClick={() => setWordInput(generateRandomWord(alphabet).join(','))}
                 disabled={!!trace || alphabet.length === 0}
-                title="Generate random word"
+                title={alphabet.length === 0 ? 'No alphabet defined — add transitions with symbols first' : 'Generate random word'}
               >
                 Random
               </button>
@@ -162,6 +162,11 @@ export function SimulationPanel() {
               )}
             </div>
           ))}
+          {alphabet.length === 0 && (
+            <button className="sim-btn sim-btn-secondary sim-btn-back" onClick={exitSimulation}>
+              Back to Editing
+            </button>
+          )}
         </div>
       )}
 

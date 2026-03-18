@@ -99,7 +99,7 @@ describe('validateAutomaton', () => {
     expect(msgs.some((m) => m.type === 'error' && m.message.includes('DFA conflict') && m.message.includes('"a"'))).toBe(true);
   });
 
-  it('warns when DFA has epsilon transitions', () => {
+  it('errors when DFA has epsilon transitions', () => {
     const auto = makeAutomaton({
       type: AutomatonType.DFA,
       transitions: [
@@ -107,7 +107,8 @@ describe('validateAutomaton', () => {
       ],
     });
     const msgs = validateAutomaton(auto);
-    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('\u03B5-transitions'))).toBe(true);
+    expect(msgs.some((m) => m.type === 'error' && m.message.includes('\u03B5-transitions'))).toBe(true);
+    expect(msgs.some((m) => m.action?.key === 'switch-nfa')).toBe(true);
   });
 
   it('does not warn about epsilon for NFA', () => {
