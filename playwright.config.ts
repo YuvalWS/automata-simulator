@@ -12,6 +12,15 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Dismiss help panel by default so it doesn't overlap other UI elements.
+    // Help-menu tests explicitly clear this to test first-visit behavior.
+    storageState: {
+      cookies: [],
+      origins: [{
+        origin: 'http://localhost:5173',
+        localStorage: [{ name: 'automata-help-seen', value: '1' }],
+      }],
+    },
   },
   projects: [
     {

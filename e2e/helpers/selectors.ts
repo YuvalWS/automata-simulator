@@ -51,6 +51,11 @@ export const SEL = {
   stateById: (id: string) => `[data-testid="state-${id}"]`,
   transitionById: (id: string) => `[data-testid="transition-${id}"]`,
 
+  // Help panel
+  helpToggle: '.shortcuts-toggle',
+  helpPanel: '.shortcuts-panel',
+  helpClose: '.shortcuts-close',
+
   // Wildcard selectors
   allStates: '[data-testid^="state-"]',
   allTransitions: '[data-testid^="transition-"]',

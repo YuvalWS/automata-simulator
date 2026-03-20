@@ -93,7 +93,11 @@ Open http://localhost:5173 in your browser. Changes in `src/` will hot-reload.
 
 ### Run Tests
 ```bash
+# Unit tests (Vitest)
 docker compose run --rm test
+
+# E2E tests (Playwright)
+docker compose run --rm e2e
 ```
 
 ### Production Build
