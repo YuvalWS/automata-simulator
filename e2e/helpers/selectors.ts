@@ -56,6 +56,15 @@ export const SEL = {
   helpPanel: '.shortcuts-panel',
   helpClose: '.shortcuts-close',
 
+  // Tab bar
+  tabBar: '[data-testid="tab-bar"]',
+  tabNewBtn: '[data-testid="tab-new-btn"]',
+  tabById: (id: string) => `[data-testid="tab-${id}"]`,
+  allTabs: '.tab-item',
+  activeTab: '.tab-item.tab-active',
+  tabCloseBtn: '.tab-close-btn',
+  tabDirtyDot: '.tab-dirty-dot',
+
   // Wildcard selectors
   allStates: '[data-testid^="state-"]',
   allTransitions: '[data-testid^="transition-"]',

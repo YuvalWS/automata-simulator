@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { useTabStore, isTabEmpty } from '@/stores/tab-store';
 import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
+import { setActiveTabFileHandle } from '@/stores/tab-store';
 import { clearAutosave } from './use-autosave';
 
 export function useKeyboardShortcuts() {
@@ -29,6 +31,7 @@ export function useKeyboardShortcuts() {
 
       const ctrl = e.ctrlKey || e.metaKey;
       const simState = useSimulationStore.getState();
+      const tabStore = useTabStore.getState();
 
       // Escape always works — exits simulation or clears selection
       if (e.key === 'Escape') {
@@ -74,12 +77,35 @@ export function useKeyboardShortcuts() {
             simState.stepBackward();
             return;
         }
-        // Block all other shortcuts during simulation
-        return;
+        // Block all other shortcuts during simulation (except tab switching below)
+        if (!ctrl) return;
       }
 
-      // Ctrl/Cmd shortcuts (editing mode only)
+      // Ctrl/Cmd shortcuts
       if (ctrl) {
+        switch (e.key.toLowerCase()) {
+          // Tab management
+          case 't':
+            e.preventDefault();
+            tabStore.createTab();
+            return;
+          case 'w':
+            e.preventDefault();
+            tabStore.closeTab(tabStore.activeTabId);
+            return;
+          case 'pagedown':
+            e.preventDefault();
+            tabStore.switchToNextTab();
+            return;
+          case 'pageup':
+            e.preventDefault();
+            tabStore.switchToPrevTab();
+            return;
+        }
+
+        // Block remaining ctrl shortcuts during simulation
+        if (simState.isActive) return;
+
         switch (e.key.toLowerCase()) {
           case 'z':
             e.preventDefault();
@@ -100,10 +126,18 @@ export function useKeyboardShortcuts() {
             return;
           case 'o':
             e.preventDefault();
-            loadFromJsonFile().then((loaded) => {
-              if (loaded) {
-                useAutomatonStore.getState().setAutomaton(loaded);
+            loadFromJsonFile().then((result) => {
+              if (!result) return;
+              const { automaton, fileHandle } = result;
+              const activeId = useTabStore.getState().activeTabId;
+              if (isTabEmpty(activeId)) {
+                // Load into current empty tab
+                useAutomatonStore.getState().setAutomaton(automaton);
+                if (fileHandle) setActiveTabFileHandle(fileHandle);
                 setDirty(false);
+              } else {
+                // Open in new tab
+                useTabStore.getState().createTab(automaton, fileHandle);
               }
             });
             return;
@@ -127,7 +161,9 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Non-modifier shortcuts (editing mode only)
+      // Non-modifier shortcuts (editing mode only — already blocked above if simulating)
+      if (simState.isActive) return;
+
       switch (e.key) {
         case ' ':
           // Toggle accepting for all selected states
@@ -151,10 +187,6 @@ export function useKeyboardShortcuts() {
             }
             clearSelection();
           }
-          break;
-        case 'a':
-        case 'A':
-          // Ctrl+A handled above, but check for just 'a' in case ctrl wasn't caught
           break;
       }
     };

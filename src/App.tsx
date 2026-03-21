@@ -1,5 +1,6 @@
 import { AutomataCanvas } from './components/canvas/AutomataCanvas';
 import { Toolbar } from './components/toolbar/Toolbar';
+import { TabBar } from './components/tabs/TabBar';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
 import { SimulationPanel } from './components/panels/SimulationPanel';
 import { ShortcutsTooltip } from './components/help/ShortcutsTooltip';
@@ -10,6 +11,7 @@ import { useTheme } from './hooks/use-theme';
 import { useSimulationStore } from './stores/simulation-store';
 import { useAutomatonStore } from './stores/automaton-store';
 import { useEditorStore } from './stores/editor-store';
+import { useTabStore } from './stores/tab-store';
 import { MobileWarning } from './components/MobileWarning';
 
 if (import.meta.env.DEV) {
@@ -17,6 +19,7 @@ if (import.meta.env.DEV) {
     automatonStore: useAutomatonStore,
     editorStore: useEditorStore,
     simulationStore: useSimulationStore,
+    tabStore: useTabStore,
   };
 }
 
@@ -31,6 +34,7 @@ export default function App() {
   return (
     <div className="app">
       <Toolbar />
+      <TabBar />
       <div className="app-main">
         <AutomataCanvas />
         {isSimulating ? <SimulationPanel /> : <PropertiesPanel />}

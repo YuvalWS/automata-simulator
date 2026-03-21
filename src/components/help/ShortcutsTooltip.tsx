@@ -12,6 +12,9 @@ const shortcuts = [
   { key: 'Ctrl+O', action: 'Load from file' },
   { key: 'Ctrl+A', action: 'Select all states' },
   { key: 'Ctrl+N', action: 'New automaton' },
+  { key: 'Ctrl+T', action: 'New tab' },
+  { key: 'Ctrl+W', action: 'Close tab' },
+  { key: 'Ctrl+PgDn/PgUp', action: 'Switch tab' },
 ];
 
 const simShortcuts = [

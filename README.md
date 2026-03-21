@@ -21,8 +21,9 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 - **Zoom controls** — scroll to zoom + toolbar +/- buttons with percentage display + fit-to-content
 - **Dark mode** — toggle between light and dark themes; respects system preference
 - **PNG export** — export the diagram as a high-resolution PNG image
-- **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport); re-saves to same file (Chromium)
-- **Auto-save** — current state automatically saved to browser storage; restored on page reload
+- **Tabs** — work on multiple automata simultaneously; each tab has independent state, undo history, and file handle; Ctrl+T/W to create/close, Ctrl+PgDn/PgUp to switch
+- **Save/Load** — export to JSON, import with exact visual state restoration (positions, zoom, viewport); re-saves to same file per tab (Chromium)
+- **Auto-save** — all tabs automatically saved to browser storage; restored on page reload
 - **Unsaved changes warning** — browser warns before closing tab with unsaved work
 - **Undo/Redo** — full undo/redo history (Ctrl+Z / Ctrl+Shift+Z)
 - **Properties panel** — edit state names, toggle initial/accepting, modify transition symbols
@@ -70,6 +71,9 @@ A web-based visual editor and simulator for finite automata (DFA and NFA). Build
 | Ctrl+S | Save to file |
 | Ctrl+O | Load from file |
 | Ctrl+N | New automaton |
+| Ctrl+T | New tab |
+| Ctrl+W | Close tab |
+| Ctrl+PgDn / PgUp | Switch to next / previous tab |
 
 ### During Simulation
 
@@ -125,7 +129,7 @@ src/
 ├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning, theme
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 207 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 233 tests covering simulation, stores, serializers, edge-routing, utils
 ```
 
 ## Auto-save
@@ -138,5 +142,5 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Custom SVG rendering (no graph library dependency)
 - Zustand for state management
 - Zod for save/load schema validation
-- Vitest for tests (205 unit tests)
+- Vitest for unit tests, Playwright for E2E tests
 - Docker + Express for deployment

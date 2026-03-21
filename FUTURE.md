@@ -1,11 +1,11 @@
 # Future Features
 
 ## Planned
-- Tab support for multiple automata
 - Hebrew UI support (RTL text, right-aligned labels)
 - Demo pictures and videos for the README and website, showing off features and how to use the app.
 
 ## Done
+- ~~Tab support for multiple automata~~ — tab bar UI, per-tab state isolation, per-tab file handles, multi-tab autosave, keyboard shortcuts (Ctrl+T/W/PgDn/PgUp)
 - ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
 - ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
 
