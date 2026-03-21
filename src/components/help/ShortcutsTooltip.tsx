@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './ShortcutsTooltip.css';
 
 const shortcuts = [
@@ -12,6 +12,9 @@ const shortcuts = [
   { key: 'Ctrl+O', action: 'Load from file' },
   { key: 'Ctrl+A', action: 'Select all states' },
   { key: 'Ctrl+N', action: 'New automaton' },
+  { key: 'Ctrl+T', action: 'New tab' },
+  { key: 'Ctrl+W', action: 'Close tab' },
+  { key: 'Ctrl+PgDn/PgUp', action: 'Switch tab' },
 ];
 
 const simShortcuts = [
@@ -42,18 +45,39 @@ const instructions = [
 
 export function ShortcutsTooltip() {
   const [isOpen, setIsOpen] = useState(() => {
-    const seen = localStorage.getItem('automata-help-seen');
-    if (!seen) {
-      localStorage.setItem('automata-help-seen', '1');
-      return true;
-    }
-    return false;
+    return !localStorage.getItem('automata-help-seen');
   });
 
+  useEffect(() => {
+    if (isOpen && !localStorage.getItem('automata-help-seen')) {
+      localStorage.setItem('automata-help-seen', '1');
+    }
+  }, []);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isOpen]);
+
   return (
-    <div className="shortcuts-container">
+    <div className="shortcuts-container" ref={containerRef}>
       {isOpen && (
         <div className="shortcuts-panel">
+          <button
+            className="shortcuts-close"
+            onClick={() => setIsOpen(false)}
+            title="Close help"
+          >
+            ×
+          </button>
           <div className="shortcuts-section">
             <h4 className="shortcuts-heading">Keyboard Shortcuts</h4>
             <table className="shortcuts-table">

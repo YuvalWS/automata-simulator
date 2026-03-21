@@ -2,6 +2,7 @@ import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { useTabStore, isTabEmpty, setActiveTabFileHandle } from '@/stores/tab-store';
 import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
 import { clearAutosave } from '@/hooks/use-autosave';
 import { useTheme } from '@/hooks/use-theme';
@@ -54,10 +55,18 @@ export function Toolbar() {
   };
 
   const handleLoad = async () => {
-    const loaded = await loadFromJsonFile();
-    if (loaded) {
+    const result = await loadFromJsonFile();
+    if (!result) return;
+    const { automaton: loaded, fileHandle } = result;
+    const activeId = useTabStore.getState().activeTabId;
+    if (isTabEmpty(activeId)) {
+      // Load into current empty tab
       setAutomaton(loaded);
+      if (fileHandle) setActiveTabFileHandle(fileHandle);
       setDirty(false);
+    } else {
+      // Open in new tab
+      useTabStore.getState().createTab(loaded, fileHandle);
     }
   };
 

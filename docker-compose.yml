@@ -26,3 +26,12 @@ services:
       - .:/app
       - /app/node_modules
     command: npm run test
+
+  e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npx playwright test
