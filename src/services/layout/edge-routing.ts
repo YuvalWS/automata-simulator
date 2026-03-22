@@ -1,6 +1,8 @@
 import type { Point } from '@/models/geometry';
 import type { AutomatonState, Transition } from '@/models/automaton';
 import { perpendicular, normalize, scale, add, midpoint } from '@/utils/math';
+import { getTransitionLabel } from '@/utils/transition-label';
+import { AutomatonType } from '@/models/types';
 
 const STATE_RADIUS = 28;
 const PARALLEL_OFFSET = 25;
@@ -22,8 +24,8 @@ export interface EdgePath {
   path: string;
 }
 
-function computeLabelWidth(symbols: string[]): number {
-  const label = symbols.join(', ');
+function computeLabelWidth(transition: Transition, automatonType: AutomatonType): number {
+  const label = getTransitionLabel(transition, automatonType);
   return label.length * LABEL_CHAR_WIDTH + LABEL_PADDING;
 }
 
@@ -144,6 +146,7 @@ function bestSelfLoopAngle(
 export function computeEdgePaths(
   states: AutomatonState[],
   transitions: Transition[],
+  automatonType: AutomatonType = AutomatonType.DFA,
 ): EdgePath[] {
   const stateMap = new Map(states.map((s) => [s.id, s]));
   const paths: EdgePath[] = [];
@@ -203,7 +206,7 @@ export function computeEdgePaths(
 
     if (t.sourceId === t.targetId) {
       const angle = bestSelfLoopAngle(t.sourceId, stateMap, transitions);
-      paths.push(computeSelfLoop(t, source, angle));
+      paths.push(computeSelfLoop(t, source, angle, automatonType));
     } else {
       const pairKey = [t.sourceId, t.targetId].sort().join('::');
       const isBidirectional = bidirectionalPairs.has(pairKey);
@@ -211,7 +214,7 @@ export function computeEdgePaths(
       const baseOffset = isBidirectional ? PARALLEL_OFFSET * offsetDir : 0;
       const fanOffset = fanOffsets.get(t.id) ?? 0;
       paths.push(
-        computeEdge(t, source, target, baseOffset + fanOffset),
+        computeEdge(t, source, target, baseOffset + fanOffset, automatonType),
       );
     }
   }
@@ -224,6 +227,7 @@ function computeSelfLoop(
   transition: Transition,
   state: AutomatonState,
   baseAngle: number,
+  automatonType: AutomatonType = AutomatonType.DFA,
 ): EdgePath {
   const { x, y } = state.position;
   const r = STATE_RADIUS;
@@ -272,7 +276,7 @@ function computeSelfLoop(
     endPoint: end,
     controlPoint: { x: (cp1.x + cp2.x) / 2, y: (cp1.y + cp2.y) / 2 },
     labelPosition: labelPos,
-    labelWidth: computeLabelWidth(transition.symbols),
+    labelWidth: computeLabelWidth(transition, automatonType),
     isSelfLoop: true,
     selfLoopCp1: cp1,
     selfLoopCp2: cp2,
@@ -285,6 +289,7 @@ function computeEdge(
   source: AutomatonState,
   target: AutomatonState,
   offset: number,
+  automatonType: AutomatonType = AutomatonType.DFA,
 ): EdgePath {
   const canonicalSource = source.id < target.id ? source : target;
   const canonicalTarget = source.id < target.id ? target : source;
@@ -335,7 +340,7 @@ function computeEdge(
     endPoint,
     controlPoint,
     labelPosition,
-    labelWidth: computeLabelWidth(transition.symbols),
+    labelWidth: computeLabelWidth(transition, automatonType),
     isSelfLoop: false,
     path: pathStr,
   };

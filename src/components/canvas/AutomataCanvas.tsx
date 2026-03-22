@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
-import type { Automaton } from '@/models/automaton';
+import type { Automaton, PdaRule } from '@/models/automaton';
 import { useEditorStore } from '@/stores/editor-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { computeEdgePaths } from '@/services/layout/edge-routing';
@@ -30,6 +30,7 @@ interface SymbolModalState {
   targetId: string;
   position: { x: number; y: number };
   existingSymbols?: string[];
+  existingPdaRules?: PdaRule[];
   editingTransitionId?: string;
 }
 
@@ -470,6 +471,7 @@ export function AutomataCanvas() {
           targetId: transition.targetId,
           position: { x: e.clientX, y: e.clientY },
           existingSymbols: transition.symbols,
+          existingPdaRules: transition.pdaRules,
           editingTransitionId: transitionId,
         });
       }
@@ -478,12 +480,16 @@ export function AutomataCanvas() {
   );
 
   const handleSymbolModalSubmit = useCallback(
-    (symbols: string[]) => {
+    (symbols: string[], pdaRules?: PdaRule[]) => {
       if (!symbolModal) return;
       if (symbolModal.editingTransitionId) {
-        updateTransition(symbolModal.editingTransitionId, { symbols });
+        if (pdaRules) {
+          updateTransition(symbolModal.editingTransitionId, { pdaRules });
+        } else {
+          updateTransition(symbolModal.editingTransitionId, { symbols });
+        }
       } else {
-        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols);
+        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols, pdaRules);
       }
       setSymbolModal(null);
     },
@@ -774,7 +780,7 @@ export function AutomataCanvas() {
     return 'active';
   };
 
-  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions);
+  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions, automaton.type);
   const initialState = automaton.states.find((s) => s.isInitial);
   const drawingSource = drawingTransition
     ? automaton.states.find((s) => s.id === drawingTransition.sourceId)
@@ -873,6 +879,7 @@ export function AutomataCanvas() {
                 key={ep.transitionId}
                 edgePath={ep}
                 transition={transition}
+                automatonType={automaton.type}
                 isSelected={isSelected('transition', ep.transitionId)}
                 isSimActive={isSimActiveTransition}
                 onClick={handleTransitionClick}
@@ -951,6 +958,8 @@ export function AutomataCanvas() {
         <TransitionSymbolModal
           position={symbolModal.position}
           initialSymbols={symbolModal.existingSymbols}
+          initialPdaRules={symbolModal.existingPdaRules}
+          automatonType={automaton.type}
           onSubmit={handleSymbolModalSubmit}
           onCancel={handleSymbolModalCancel}
         />

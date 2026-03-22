@@ -102,3 +102,58 @@
   font-size: 13px;
   color: var(--color-text-secondary);
 }
+
+/* PDA transition rule editing in properties panel */
+.pda-prop-rule {
+  margin-bottom: 6px;
+}
+
+.pda-prop-rule-fields {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pda-prop-input {
+  width: 50px;
+  min-width: 0;
+  flex: 1;
+  padding: 3px 5px;
+  font-size: 12px;
+}
+
+.pda-prop-sep {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.pda-prop-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.pda-prop-remove:hover {
+  color: var(--color-error, #e53e3e);
+}
+
+.pda-prop-add {
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.pda-prop-add:hover {
+  background: var(--color-bg);
+}

@@ -25,6 +25,25 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
     messages.push({ type: 'warning', message: 'Alphabet is empty.' });
   }
 
+  if (automaton.type === AutomatonType.PDA) {
+    // PDA-specific validation
+    const hasStackOps = automaton.transitions.some((t) =>
+      t.pdaRules && t.pdaRules.some((r) => r.stackPop !== EPSILON || r.stackPush.length > 0),
+    );
+    if (!hasStackOps && automaton.transitions.length > 0) {
+      messages.push({ type: 'warning', message: 'No transitions use stack operations. Consider using NFA instead.' });
+    }
+
+    if (automaton.acceptanceMode === 'emptyStack') {
+      const hasAccepting = automaton.states.some((s) => s.isAccepting);
+      if (hasAccepting) {
+        messages.push({ type: 'warning', message: 'Accepting states are ignored in empty-stack acceptance mode.' });
+      }
+    }
+
+    return messages;
+  }
+
   if (automaton.type === AutomatonType.DFA) {
     // Error if DFA has epsilon transitions
     const hasEpsilon = automaton.transitions.some((t) => t.symbols.includes(EPSILON));

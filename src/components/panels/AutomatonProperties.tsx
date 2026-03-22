@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
+import type { PdaAcceptanceMode } from '@/models/types';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
   const setName = useAutomatonStore((s) => s.setName);
   const setType = useAutomatonStore((s) => s.setType);
   const setAlphabet = useAutomatonStore((s) => s.setAlphabet);
+  const setAcceptanceMode = useAutomatonStore((s) => s.setAcceptanceMode);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
 
@@ -59,8 +61,24 @@ export function AutomatonProperties() {
         >
           <option value={AutomatonType.DFA}>DFA</option>
           <option value={AutomatonType.NFA}>NFA</option>
+          <option value={AutomatonType.PDA}>PDA</option>
         </select>
       </label>
+
+      {automaton.type === AutomatonType.PDA && (
+        <label className="panel-field">
+          <span className="panel-label">Acceptance Mode</span>
+          <select
+            className="panel-select"
+            value={automaton.acceptanceMode ?? 'finalState'}
+            onChange={(e) => setAcceptanceMode(e.target.value as PdaAcceptanceMode)}
+            data-testid="pda-acceptance-mode-select"
+          >
+            <option value="finalState">Final State</option>
+            <option value="emptyStack">Empty Stack</option>
+          </select>
+        </label>
+      )}
 
       <label className="panel-field">
         <span className="panel-label">Alphabet (comma-separated)</span>

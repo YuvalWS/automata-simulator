@@ -56,6 +56,42 @@ export class AutomatonBuilder {
   }
 
   /**
+   * Load a simple PDA for a^n b^n:
+   * q0: push A for each 'a'
+   * q1: pop A for each 'b'
+   * q2: accepting state (reached when stack has only Z₀)
+   */
+  async loadSimplePDA() {
+    await this.page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      if (!stores) throw new Error('Stores not exposed — is dev mode running?');
+      const store = stores.automatonStore.getState();
+      store.newAutomaton('Test PDA');
+      store.setType('PDA');
+      store.setAcceptanceMode('finalState');
+      const automaton = stores.automatonStore.getState().automaton;
+      const q0 = automaton.states[0];
+      const q1 = store.addState({ x: 350, y: 250 });
+      const q2 = store.addState({ x: 500, y: 250 });
+      store.toggleAccepting(q2.id);
+
+      const EPS = '\u03B5';
+      const Z0 = 'Z\u2080';
+
+      // q0: read 'a', pop Z₀, push A,Z₀
+      store.addTransition(q0.id, q0.id, [], [{ inputSymbol: 'a', stackPop: Z0, stackPush: ['A', Z0] }]);
+      // q0: read 'a', pop A, push A,A
+      store.addTransition(q0.id, q0.id, [], [{ inputSymbol: 'a', stackPop: 'A', stackPush: ['A', 'A'] }]);
+      // q0 -> q1: epsilon, pop A, push A (switch to popping phase)
+      store.addTransition(q0.id, q1.id, [], [{ inputSymbol: EPS, stackPop: 'A', stackPush: ['A'] }]);
+      // q1: read 'b', pop A, push nothing
+      store.addTransition(q1.id, q1.id, [], [{ inputSymbol: 'b', stackPop: 'A', stackPush: [] }]);
+      // q1 -> q2: epsilon, pop Z₀, push Z₀ (done)
+      store.addTransition(q1.id, q2.id, [], [{ inputSymbol: EPS, stackPop: Z0, stackPush: [Z0] }]);
+    });
+  }
+
+  /**
    * Reset to a fresh empty automaton (with just q0 as initial).
    */
   async reset() {

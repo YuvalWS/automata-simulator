@@ -1,16 +1,19 @@
 import type { EdgePath } from '@/services/layout/edge-routing';
 import type { Transition } from '@/models/automaton';
+import type { AutomatonType } from '@/models/types';
+import { getTransitionLabel } from '@/utils/transition-label';
 
 interface TransitionEdgeProps {
   edgePath: EdgePath;
   transition: Transition;
+  automatonType: AutomatonType;
   isSelected: boolean;
   isSimActive?: boolean;
   onClick: (e: React.MouseEvent, transitionId: string) => void;
   onDoubleClick: (e: React.MouseEvent, transitionId: string) => void;
 }
 
-export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, onClick, onDoubleClick }: TransitionEdgeProps) {
+export function TransitionEdge({ edgePath, transition, automatonType, isSelected, isSimActive, onClick, onDoubleClick }: TransitionEdgeProps) {
   let strokeColor = 'var(--color-transition-stroke)';
   let strokeWidth = 2;
 
@@ -22,7 +25,7 @@ export function TransitionEdge({ edgePath, transition, isSelected, isSimActive, 
     strokeWidth = 2.5;
   }
 
-  const label = transition.symbols.join(', ');
+  const label = getTransitionLabel(transition, automatonType);
   const className = `transition-edge${isSimActive ? ' transition-edge--sim-active' : ''}`;
 
   return (

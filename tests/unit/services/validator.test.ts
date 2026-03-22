@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { validateAutomaton, validateWord } from '@/services/simulation/validator';
 import type { Automaton } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
+import { EPSILON, STACK_BOTTOM } from '@/models/epsilon';
 
 function makeAutomaton(overrides: Partial<Automaton> = {}): Automaton {
   return {
@@ -255,5 +256,53 @@ describe('validateAutomaton edge cases', () => {
     };
     const msgs = validateAutomaton(auto);
     expect(msgs.some((m) => m.type === 'error' && m.message.includes('DFA conflict') && m.message.includes('"a"'))).toBe(true);
+  });
+});
+
+describe('PDA validation', () => {
+  it('returns no errors for valid PDA', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: ['A', STACK_BOTTOM] }] },
+      ],
+    });
+    const msgs = validateAutomaton(pda);
+    expect(msgs.filter((m) => m.type === 'error')).toHaveLength(0);
+  });
+
+  it('errors when PDA has no initial state', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+    });
+    const msgs = validateAutomaton(pda);
+    expect(msgs.some((m) => m.type === 'error' && m.message.includes('No initial state'))).toBe(true);
+  });
+
+  it('warns when no transitions use stack operations', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [{ inputSymbol: 'a', stackPop: EPSILON, stackPush: [] }] },
+      ],
+    });
+    const msgs = validateAutomaton(pda);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('stack operations'))).toBe(true);
+  });
+
+  it('warns when emptyStack mode but accepting states exist', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      acceptanceMode: 'emptyStack',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: [] }] },
+      ],
+    });
+    const msgs = validateAutomaton(pda);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('empty-stack'))).toBe(true);
   });
 });

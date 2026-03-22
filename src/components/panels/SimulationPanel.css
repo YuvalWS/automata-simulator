@@ -342,3 +342,48 @@
 .sim-batch-badge-rejected {
   color: var(--color-batch-rejected-text);
 }
+
+/* PDA Stack visualization */
+.sim-stack-section {
+  margin-top: 8px;
+}
+
+.sim-configs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.sim-config-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--color-bg);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.sim-config-state {
+  font-weight: 600;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.sim-config-stack {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sim-config-more {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  padding: 2px 6px;
+}
