@@ -75,4 +75,51 @@ test.describe('DFA/NFA Switching', () => {
     await page.locator(SEL.automatonTypeSelect).selectOption('DFA');
     expect((await builder.getAutomaton()).type).toBe('DFA');
   });
+
+  test('switching DFA to NFA preserves existing transitions', async ({ page }) => {
+    // Load a DFA with transitions
+    await builder.loadSimpleDFA();
+    await page.waitForTimeout(100);
+
+    const beforeTransitions = (await builder.getAutomaton()).transitions.length;
+    const beforeStates = (await builder.getAutomaton()).states.length;
+
+    // Switch to NFA
+    await page.locator(SEL.automatonTypeSelect).selectOption('NFA');
+    await page.waitForTimeout(50);
+
+    const afterTransitions = (await builder.getAutomaton()).transitions.length;
+    const afterStates = (await builder.getAutomaton()).states.length;
+
+    // All states and transitions should be preserved
+    expect(afterStates).toBe(beforeStates);
+    expect(afterTransitions).toBe(beforeTransitions);
+  });
+
+  test('switching NFA to DFA preserves states', async ({ page }) => {
+    await builder.loadNFAWithEpsilon();
+    await page.waitForTimeout(100);
+
+    const beforeStates = (await builder.getAutomaton()).states.length;
+
+    await page.locator(SEL.automatonTypeSelect).selectOption('DFA');
+    await page.waitForTimeout(50);
+
+    const afterStates = (await builder.getAutomaton()).states.length;
+    expect(afterStates).toBe(beforeStates);
+    expect((await builder.getAutomaton()).type).toBe('DFA');
+  });
+
+  test('type change is reflected in properties panel badge', async ({ page }) => {
+    // Default is DFA
+    await expect(page.locator('.automaton-type-badge')).toHaveText('DFA');
+
+    // Switch to NFA
+    await page.locator(SEL.automatonTypeSelect).selectOption('NFA');
+    await expect(page.locator('.automaton-type-badge')).toHaveText('NFA');
+
+    // Switch back
+    await page.locator(SEL.automatonTypeSelect).selectOption('DFA');
+    await expect(page.locator('.automaton-type-badge')).toHaveText('DFA');
+  });
 });

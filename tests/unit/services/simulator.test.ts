@@ -801,3 +801,174 @@ describe('NFA with epsilon transitions', () => {
     expect(last(trace.snapshots).status).toBe('accepted');
   });
 });
+
+// --- Additional edge cases for epsilon closure and NFA behavior ---
+
+describe('epsilon closure edge cases', () => {
+  const EPS = '\u03B5';
+
+  it('deduplicates when multiple parallel epsilon paths reach the same state', () => {
+    // q0 --ε--> q1, q0 --ε--> q2, q1 --ε--> q3, q2 --ε--> q3
+    // Both paths reach q3 — it should appear only once in activeStateIds.
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 100, y: 100 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 'e1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 'e2', sourceId: 'q0', targetId: 'q2', symbols: [EPS] },
+        { id: 'e3', sourceId: 'q1', targetId: 'q3', symbols: [EPS] },
+        { id: 'e4', sourceId: 'q2', targetId: 'q3', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, []);
+    // q3 should appear only once despite two epsilon paths
+    const q3Count = trace.snapshots[0]!.activeStateIds.filter((id) => id === 'q3').length;
+    expect(q3Count).toBe(1);
+    expect(last(trace.snapshots).status).toBe('accepted');
+  });
+
+  it('follows long epsilon chain (3+ transitions)', () => {
+    // q0 --ε--> q1 --ε--> q2 --ε--> q3(accept)
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: [],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 300, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 'e1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+        { id: 'e2', sourceId: 'q1', targetId: 'q2', symbols: [EPS] },
+        { id: 'e3', sourceId: 'q2', targetId: 'q3', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, []);
+    // All four states reachable at step 0 via epsilon chain
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q0');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q1');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q2');
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q3');
+    expect(last(trace.snapshots).status).toBe('accepted');
+  });
+
+  it('handles epsilon only from non-initial state', () => {
+    // q0 --a--> q1 --ε--> q2(accept)
+    // No epsilon from q0, so step 0 has only {q0}
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 'e1', sourceId: 'q1', targetId: 'q2', symbols: [EPS] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    // Step 0: only q0 (no epsilon from initial)
+    expect(trace.snapshots[0]!.activeStateIds).toEqual(['q0']);
+    // Step 1: q1 + epsilon closure to q2
+    expect(trace.snapshots[1]!.activeStateIds).toContain('q1');
+    expect(trace.snapshots[1]!.activeStateIds).toContain('q2');
+    expect(last(trace.snapshots).status).toBe('accepted');
+  });
+});
+
+describe('NFA additional edge cases', () => {
+  it('NFA where all branches die mid-word', () => {
+    // q0 --a--> q1, no transitions from q1 on 'b'
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a', 'b'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+      ],
+    });
+    const trace = buildSimulationTrace(auto, ['a', 'b']);
+    // After 'b' from q1, all branches die
+    expect(last(trace.snapshots).status).toBe('rejected');
+    expect(last(trace.snapshots).activeStateIds).toEqual([]);
+  });
+
+  it('NFA self-loop with both epsilon and regular symbol', () => {
+    // q0 has self-loop on 'a' and epsilon to q1(accept)
+    const EPS = '\u03B5';
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q0', symbols: ['a'] },
+        { id: 'e1', sourceId: 'q0', targetId: 'q1', symbols: [EPS] },
+      ],
+    });
+    // Even with 'a' (self-loop), epsilon to q1 means acceptance
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(last(trace.snapshots).status).toBe('accepted');
+  });
+
+  it('NFA with transition to non-existent target state does not crash', () => {
+    // Transition references a targetId that doesn't match any state
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'nonexistent', symbols: ['a'] },
+      ],
+    });
+    // Should not throw — the branch just won't find an accepting state
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(trace.snapshots).toBeDefined();
+    expect(trace.snapshots).toHaveLength(2); // step 0 (initial) + step 1 (after 'a')
+    expect(trace.snapshots[0]!.activeStateIds).toContain('q0');
+    // After consuming 'a', the branch to nonexistent state dies — no active states
+    expect(trace.snapshots[1]!.activeStateIds).toHaveLength(0);
+    expect(last(trace.snapshots).status).toBe('rejected');
+  });
+});
+
+describe('trace edge cases', () => {
+  it('single-state automaton with no transitions accepts empty word if accepting', () => {
+    const auto = makeAutomaton({
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: true },
+      ],
+      transitions: [],
+    });
+    expect(lastStatus(auto, [])).toBe('accepted');
+    // Non-empty word should be rejected (no transitions)
+    expect(lastStatus(auto, ['a'])).toBe('rejected');
+  });
+
+  it('automaton with no states returns a valid rejected trace', () => {
+    const auto = makeAutomaton({
+      states: [],
+      transitions: [],
+    });
+    const trace = buildSimulationTrace(auto, ['a']);
+    expect(trace.snapshots).toHaveLength(1);
+    expect(trace.snapshots[0]!.status).toBe('rejected');
+    expect(trace.snapshots[0]!.activeStateIds).toEqual([]);
+  });
+});

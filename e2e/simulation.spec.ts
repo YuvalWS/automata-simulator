@@ -167,4 +167,114 @@ test.describe('Simulation', () => {
     await expect(page.locator(SEL.toolbarUndo)).toBeDisabled();
     await expect(page.locator(SEL.toolbarRedo)).toBeDisabled();
   });
+
+  test('NFA simulation with epsilon shows multiple active states at step 0', async ({ page }) => {
+    // Load NFA with epsilon: q0 --ε--> q1, q0 --a--> q0, q1 --b--> q2(accept)
+    await builder.loadNFAWithEpsilon();
+    await page.waitForTimeout(100);
+
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator(SEL.simWordInput).fill('b');
+    await page.locator(SEL.simRunBtn).click();
+    await page.waitForTimeout(200);
+
+    // Pause auto-run and go to step 0 to check epsilon closure highlighting
+    const pauseBtn = page.locator('button[title="Pause"]');
+    if (await pauseBtn.isVisible()) {
+      await pauseBtn.click();
+    }
+    await page.locator('button[title="Go to start"]').click();
+    await page.waitForTimeout(100);
+
+    // At step 0, epsilon closure of {q0} = {q0, q1} — both should be highlighted
+    const activeStates = page.locator('.state-node--sim-active');
+    await expect(activeStates).toHaveCount(2);
+  });
+
+  test('NFA simulation with epsilon accepts word through epsilon path', async ({ page }) => {
+    // Load NFA with epsilon: q0 --ε--> q1, q0 --a--> q0, q1 --b--> q2(accept)
+    await builder.loadNFAWithEpsilon();
+    await page.waitForTimeout(100);
+
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator(SEL.simWordInput).fill('b');
+    await page.locator(SEL.simRunBtn).click();
+    await page.waitForTimeout(200);
+
+    // Navigate to end to see the result
+    await page.locator('button[title="Go to end"]').click();
+
+    // 'b' should be accepted: q0 --ε--> q1 --b--> q2(accept)
+    await expect(page.locator('.sim-status-accepted')).toBeVisible();
+  });
+
+  test('simulation with empty word shows immediate result', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+
+    // Empty input = empty word (epsilon)
+    await page.locator(SEL.simWordInput).fill('');
+    await page.locator(SEL.simRunBtn).click();
+    await page.waitForTimeout(200);
+
+    // q0 is not accepting in our DFA, so empty word should be rejected
+    await expect(page.locator('.sim-status-rejected')).toBeVisible();
+  });
+
+  test('batch mode with mixed results shows correct status icons', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator('text=Batch').click();
+
+    // 'a' → accepted (reaches q1), 'b' → rejected (stays at q0)
+    await page.locator(SEL.simBatchInput).fill('a\nb');
+    await page.locator('text=Run All').click();
+    await page.waitForTimeout(200);
+
+    const results = page.locator('.sim-batch-row');
+    await expect(results).toHaveCount(2);
+
+    await expect(page.locator('.sim-batch-badge-accepted')).toHaveCount(1);
+    await expect(page.locator('.sim-batch-badge-rejected')).toHaveCount(1);
+  });
+
+  test('step counter updates during navigation', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator(SEL.simWordInput).fill('a,b,a');
+    await page.locator(SEL.simRunBtn).click();
+    await page.waitForTimeout(200);
+
+    // Pause auto-run
+    const pauseBtn = page.locator('button[title="Pause"]');
+    if (await pauseBtn.isVisible()) {
+      await pauseBtn.click();
+    }
+
+    // Go to start
+    await page.locator('button[title="Go to start"]').click();
+
+    // Step counter should show step info
+    const stepText = page.locator('.panel-title').nth(1);
+    const initialText = await stepText.textContent();
+
+    // Step forward
+    await page.locator('button[title="Step forward"]').click();
+    const nextText = await stepText.textContent();
+
+    // Step counter should have changed
+    expect(initialText).not.toBe(nextText);
+  });
+
+  test('pause stops auto-run animation', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator(SEL.simWordInput).fill('a,b,a,b');
+    await page.locator(SEL.simRunBtn).click();
+
+    // Should be auto-running — Pause button visible
+    const pauseBtn = page.locator('button[title="Pause"]');
+    await expect(pauseBtn).toBeVisible();
+
+    await pauseBtn.click();
+
+    // After pause, the button should now show "Auto-run" (play icon)
+    await expect(page.locator('button[title="Auto-run"]')).toBeVisible();
+  });
 });

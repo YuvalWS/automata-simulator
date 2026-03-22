@@ -1,3 +1,10 @@
+/**
+ * Tests for automaton-store.ts
+ *
+ * The automaton store is the central state manager for the automaton model.
+ * It handles state/transition CRUD, type switching, undo/redo via history store,
+ * and ensures structural invariants (e.g., only one initial state, merged transitions).
+ */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
@@ -161,6 +168,85 @@ describe('automaton store', () => {
     it('sets the alphabet', () => {
       useAutomatonStore.getState().setAlphabet(['a', 'b', 'c']);
       expect(useAutomatonStore.getState().automaton.alphabet).toEqual(['a', 'b', 'c']);
+    });
+  });
+
+  // --- Additional edge cases ---
+
+  describe('setType edge cases', () => {
+    it('switching DFA to NFA preserves existing states and transitions', () => {
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, ['a']);
+
+      useAutomatonStore.getState().setType(AutomatonType.NFA);
+
+      const { automaton } = useAutomatonStore.getState();
+      expect(automaton.type).toBe(AutomatonType.NFA);
+      expect(automaton.states).toHaveLength(2);
+      expect(automaton.transitions).toHaveLength(1);
+      expect(automaton.transitions[0]!.symbols).toEqual(['a']);
+    });
+
+    it('switching NFA back to DFA preserves states and transitions', () => {
+      useAutomatonStore.getState().setType(AutomatonType.NFA);
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, ['a']);
+
+      useAutomatonStore.getState().setType(AutomatonType.DFA);
+
+      const { automaton } = useAutomatonStore.getState();
+      expect(automaton.type).toBe(AutomatonType.DFA);
+      expect(automaton.states).toHaveLength(2);
+      expect(automaton.transitions).toHaveLength(1);
+    });
+  });
+
+  describe('removeState edge cases', () => {
+    it('removing initial state leaves no state marked initial', () => {
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      useAutomatonStore.getState().addState({ x: 100, y: 0 });
+
+      useAutomatonStore.getState().removeState(q0.id);
+
+      const { states } = useAutomatonStore.getState().automaton;
+      expect(states).toHaveLength(1);
+      // After removing the initial state, no remaining state should be initial
+      expect(states.every((s) => !s.isInitial)).toBe(true);
+    });
+  });
+
+  describe('addTransition edge cases', () => {
+    it('merges duplicate symbols when adding to existing transition', () => {
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, ['a']);
+      // Add 'a' again — should not duplicate
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, ['a']);
+
+      const { transitions } = useAutomatonStore.getState().automaton;
+      expect(transitions).toHaveLength(1);
+      expect(transitions[0]!.symbols).toEqual(['a']); // no duplicates
+    });
+  });
+
+  describe('setAlphabet edge cases', () => {
+    it('setting empty string produces empty alphabet array', () => {
+      useAutomatonStore.getState().setAlphabet([]);
+      expect(useAutomatonStore.getState().automaton.alphabet).toEqual([]);
+    });
+  });
+
+  describe('updateState edge cases', () => {
+    it('allows updating a state name to same name as another state', () => {
+      // The store does not enforce unique names — that's a UI/validation concern
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().updateState(q0.id, { name: 'q1' });
+
+      const updated = useAutomatonStore.getState().automaton.states.find((s) => s.id === q0.id);
+      expect(updated!.name).toBe('q1');
     });
   });
 });

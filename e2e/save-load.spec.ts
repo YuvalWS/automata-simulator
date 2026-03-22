@@ -83,4 +83,86 @@ test.describe('Save and Load', () => {
     );
     expect(hasEpsilon).toBe(true);
   });
+
+  test('round-trip preserves automaton name, type, and alphabet', async ({ page }) => {
+    // Build a DFA and set specific name and alphabet
+    await builder.loadSimpleDFA();
+    await page.waitForTimeout(100);
+
+    await page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      stores.automatonStore.getState().setName('My Custom DFA');
+      stores.automatonStore.getState().setAlphabet(['x', 'y', 'z']);
+    });
+
+    // Serialize
+    const serialized = await page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      return JSON.parse(JSON.stringify(stores.automatonStore.getState().automaton));
+    });
+
+    // Reset and restore
+    await builder.reset();
+    await page.evaluate((data: any) => {
+      const stores = (window as any).__stores__;
+      stores.automatonStore.getState().setAutomaton(data);
+    }, serialized);
+    await page.waitForTimeout(100);
+
+    const restored = await builder.getAutomaton();
+    expect(restored.name).toBe('My Custom DFA');
+    expect(restored.type).toBe('DFA');
+    expect(restored.alphabet).toEqual(['x', 'y', 'z']);
+  });
+
+  test('save and reload preserves transition symbols accurately', async ({ page }) => {
+    // Build a DFA with a multi-symbol transition via store injection
+    await page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      const store = stores.automatonStore.getState();
+      store.newAutomaton('Multi-Symbol DFA');
+      const q0 = stores.automatonStore.getState().automaton.states[0];
+      const q1 = store.addState({ x: 400, y: 250 });
+      // Create a multi-symbol transition: q0 --a,b--> q1
+      store.addTransition(q0.id, q1.id, ['a', 'b']);
+    });
+    await page.waitForTimeout(100);
+
+    const serialized = await page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      return JSON.parse(JSON.stringify(stores.automatonStore.getState().automaton));
+    });
+
+    await builder.reset();
+    await page.evaluate((data: any) => {
+      const stores = (window as any).__stores__;
+      stores.automatonStore.getState().setAutomaton(data);
+    }, serialized);
+    await page.waitForTimeout(100);
+
+    const restored = await builder.getAutomaton();
+    const multiSymbol = restored.transitions.find((t: any) => t.symbols.length > 1);
+    expect(multiSymbol).toBeDefined();
+    expect(multiSymbol!.symbols).toEqual(['a', 'b']);
+  });
+
+  test('NFA type is preserved through serialize/deserialize', async ({ page }) => {
+    await builder.loadNFAWithEpsilon();
+    await page.waitForTimeout(100);
+
+    const serialized = await page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      return JSON.parse(JSON.stringify(stores.automatonStore.getState().automaton));
+    });
+
+    await builder.reset();
+    await page.evaluate((data: any) => {
+      const stores = (window as any).__stores__;
+      stores.automatonStore.getState().setAutomaton(data);
+    }, serialized);
+    await page.waitForTimeout(100);
+
+    const restored = await builder.getAutomaton();
+    expect(restored.type).toBe('NFA');
+  });
 });

@@ -1,3 +1,10 @@
+/**
+ * Tests for validator.ts
+ *
+ * The validator checks automata for structural issues (missing initial state,
+ * DFA conflicts, epsilon in DFA) and validates input words against the alphabet.
+ * Validation errors block simulation; warnings are displayed but allow simulation.
+ */
 import { describe, it, expect } from 'vitest';
 import { validateAutomaton, validateWord } from '@/services/simulation/validator';
 import type { Automaton } from '@/models/automaton';
@@ -160,5 +167,93 @@ describe('validateWord', () => {
     const msgs = validateWord(['x', 'y'], ['a']);
     expect(msgs[0]!.message).toContain('"x"');
     expect(msgs[0]!.message).toContain('"y"');
+  });
+});
+
+// --- Additional edge cases ---
+
+describe('validateAutomaton edge cases', () => {
+  // DFA conflict: self-loop uses the same symbol as an outgoing transition
+  it('detects DFA conflict between self-loop and outgoing transition on same symbol', () => {
+    const auto: Automaton = {
+      id: 'test', name: 'Test', type: AutomatonType.DFA, alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q0', symbols: ['a'] }, // self-loop
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: ['a'] }, // outgoing
+      ],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const msgs = validateAutomaton(auto);
+    expect(msgs.some((m) => m.type === 'error' && m.message.includes('DFA conflict'))).toBe(true);
+  });
+
+  // NFA allows multiple transitions on same symbol — no conflict error
+  it('NFA allows multiple transitions on same symbol without conflict error', () => {
+    const auto: Automaton = {
+      id: 'test', name: 'Test', type: AutomatonType.NFA, alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q0', targetId: 'q2', symbols: ['a'] },
+      ],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const msgs = validateAutomaton(auto);
+    expect(msgs.filter((m) => m.type === 'error')).toHaveLength(0);
+  });
+
+  // Empty automaton (no states at all) should report "no initial state"
+  it('empty automaton with no states produces no-initial-state error', () => {
+    const auto: Automaton = {
+      id: 'test', name: 'Test', type: AutomatonType.DFA, alphabet: ['a'],
+      states: [],
+      transitions: [],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const msgs = validateAutomaton(auto);
+    expect(msgs.some((m) => m.type === 'error' && m.message.includes('No initial state'))).toBe(true);
+  });
+
+  // DFA with initial state but no transitions warns about missing transitions
+  it('DFA with initial state but no transitions warns about missing transitions', () => {
+    const auto: Automaton = {
+      id: 'test', name: 'Test', type: AutomatonType.DFA, alphabet: ['a', 'b'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      ],
+      transitions: [],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const msgs = validateAutomaton(auto);
+    const missingWarnings = msgs.filter((m) => m.type === 'warning' && m.message.includes('no transition'));
+    // q0 should have warnings for both 'a' and 'b'
+    expect(missingWarnings).toHaveLength(2);
+  });
+
+  // DFA with multiple transitions from same state to different targets on same symbol
+  it('DFA detects conflict when same symbol goes to different targets', () => {
+    const auto: Automaton = {
+      id: 'test', name: 'Test', type: AutomatonType.DFA, alphabet: ['a'],
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q0', targetId: 'q2', symbols: ['a'] },
+      ],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const msgs = validateAutomaton(auto);
+    expect(msgs.some((m) => m.type === 'error' && m.message.includes('DFA conflict') && m.message.includes('"a"'))).toBe(true);
   });
 });
