@@ -11,7 +11,12 @@ import { InitialArrow } from './InitialArrow';
 import { GhostEdge } from './GhostEdge';
 import { GridBackground } from './GridBackground';
 import { TransitionSymbolModal } from './TransitionSymbolModal';
+import { ContextMenu } from '@/components/mobile/ContextMenu';
+import type { ContextMenuItem } from '@/components/mobile/ContextMenu';
 import { useHistoryStore } from '@/stores/history-store';
+import { useViewport } from '@/hooks/use-viewport';
+import { useTouchCanvas } from '@/hooks/use-touch-canvas';
+import type { TouchCanvasCallbacks } from '@/hooks/use-touch-canvas';
 import { snapToAlignment, computeSnapGuides } from '@/utils/snap';
 import { pointToSegmentDist } from '@/utils/math';
 import type { SnapGuide } from '@/utils/snap';
@@ -493,6 +498,259 @@ export function AutomataCanvas() {
     setHoverPoint(null);
   }, []);
 
+  // --- Touch support ---
+  const { isMobile } = useViewport();
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
+
+  const findStateNearClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const point = getSvgPoint(clientX, clientY);
+      return automaton.states.find((s) => {
+        const dx = s.position.x - point.x;
+        const dy = s.position.y - point.y;
+        return Math.sqrt(dx * dx + dy * dy) <= 35; // slightly larger radius for touch
+      });
+    },
+    [getSvgPoint, automaton.states],
+  );
+
+  const findTransitionNearClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const point = getSvgPoint(clientX, clientY);
+      const stateMap = new Map(automaton.states.map((s) => [s.id, s.position]));
+      for (const t of automaton.transitions) {
+        const src = stateMap.get(t.sourceId);
+        const tgt = stateMap.get(t.targetId);
+        if (src && tgt) {
+          if (t.sourceId === t.targetId) {
+            // Self-loop: check distance from loop center (above state)
+            const dx = point.x - src.x;
+            const dy = point.y - (src.y - 55);
+            if (Math.sqrt(dx * dx + dy * dy) < 30) return t;
+          } else if (pointToSegmentDist(point, src, tgt) < 20) {
+            return t;
+          }
+        }
+      }
+      return undefined;
+    },
+    [getSvgPoint, automaton.states, automaton.transitions],
+  );
+
+  const pinchRef = useRef<{ startZoom: number; startPanX: number; startPanY: number; startCenterX: number; startCenterY: number; initialDist: number } | null>(null);
+  const touchDragRef = useRef<{ type: 'state' | 'pan'; stateId?: string; preDragAutomaton?: Automaton; offset?: { x: number; y: number } } | null>(null);
+
+  // No need for useMemo — the hook stores callbacks in a ref (cbRef.current)
+  // so the native listeners always see the latest version regardless.
+  const touchCallbacks: TouchCanvasCallbacks = {
+    onTap: (clientX, clientY, _target) => {
+      setContextMenu(null);
+
+      if (simIsActive) return;
+
+      // Placing new state mode
+      if (placingNewState) {
+        const point = getSvgPoint(clientX, clientY);
+        addState(point);
+        stopPlacingState();
+        return;
+      }
+
+      const state = findStateNearClient(clientX, clientY);
+      if (state) {
+        // Check for pending transition source
+        const pending = useEditorStore.getState().pendingTransitionSource;
+        const now = Date.now();
+        if (pending && pending.stateId !== state.id && now - pending.timestamp < PENDING_TIMEOUT_MS) {
+          setSymbolModal({
+            sourceId: pending.stateId,
+            targetId: state.id,
+            position: { x: clientX, y: clientY },
+          });
+          setPendingTransitionSource(null);
+        } else {
+          setSelection({ type: 'state', id: state.id });
+          setPendingTransitionSource(state.id);
+        }
+        return;
+      }
+
+      const transition = findTransitionNearClient(clientX, clientY);
+      if (transition) {
+        setSelection({ type: 'transition', id: transition.id });
+        setPendingTransitionSource(null);
+        return;
+      }
+
+      // Tap on empty canvas
+      clearSelection();
+      setPendingTransitionSource(null);
+    },
+
+    onDoubleTap: (clientX, clientY, _target) => {
+      if (simIsActive) return;
+      setContextMenu(null);
+
+      const state = findStateNearClient(clientX, clientY);
+      if (state) {
+        setPendingTransitionSource(null);
+        setSymbolModal({
+          sourceId: state.id,
+          targetId: state.id,
+          position: { x: clientX, y: clientY },
+        });
+        return;
+      }
+
+      const transition = findTransitionNearClient(clientX, clientY);
+      if (transition) {
+        setSymbolModal({
+          sourceId: transition.sourceId,
+          targetId: transition.targetId,
+          position: { x: clientX, y: clientY },
+          existingSymbols: transition.symbols,
+          editingTransitionId: transition.id,
+        });
+      }
+    },
+
+    onLongPress: (clientX, clientY, _target) => {
+      if (simIsActive) return;
+
+      const state = findStateNearClient(clientX, clientY);
+      if (state) {
+        const removeState = useAutomatonStore.getState().removeState;
+        const setInitialState = useAutomatonStore.getState().setInitialState;
+        const toggleAccepting = useAutomatonStore.getState().toggleAccepting;
+        setContextMenu({
+          x: clientX,
+          y: clientY,
+          items: [
+            { label: state.isAccepting ? 'Unset Accepting' : 'Set Accepting', action: () => toggleAccepting(state.id) },
+            { label: state.isInitial ? 'Unset Initial' : 'Set Initial', action: () => setInitialState(state.id) },
+            { label: 'Delete State', action: () => { removeState(state.id); clearSelection(); }, danger: true },
+          ],
+        });
+        return;
+      }
+
+      const transition = findTransitionNearClient(clientX, clientY);
+      if (transition) {
+        const removeTransition = useAutomatonStore.getState().removeTransition;
+        setContextMenu({
+          x: clientX,
+          y: clientY,
+          items: [
+            {
+              label: 'Edit Symbols',
+              action: () => setSymbolModal({
+                sourceId: transition.sourceId,
+                targetId: transition.targetId,
+                position: { x: clientX, y: clientY },
+                existingSymbols: transition.symbols,
+                editingTransitionId: transition.id,
+              }),
+            },
+            { label: 'Delete Transition', action: () => { removeTransition(transition.id); clearSelection(); }, danger: true },
+          ],
+        });
+      }
+    },
+
+    onDragStart: (clientX, clientY, _target) => {
+      setContextMenu(null);
+      const state = findStateNearClient(clientX, clientY);
+      if (state && !simIsActive) {
+        const point = getSvgPoint(clientX, clientY);
+        touchDragRef.current = {
+          type: 'state',
+          stateId: state.id,
+          preDragAutomaton: useAutomatonStore.getState().automaton,
+          offset: { x: state.position.x - point.x, y: state.position.y - point.y },
+        };
+        setSelection({ type: 'state', id: state.id });
+        return;
+      }
+      // Pan
+      touchDragRef.current = { type: 'pan' };
+      const vp = useAutomatonStore.getState().automaton.viewport;
+      panStart.current = { x: clientX, y: clientY, panX: vp.panX, panY: vp.panY };
+    },
+
+    onDragMove: (clientX, clientY) => {
+      const td = touchDragRef.current;
+      if (!td) return;
+
+      if (td.type === 'state' && td.stateId && td.offset) {
+        const point = getSvgPoint(clientX, clientY);
+        const rawPos = { x: point.x + td.offset.x, y: point.y + td.offset.y };
+        const snapped = snapToAlignment(rawPos, td.stateId, useAutomatonStore.getState().automaton.states);
+        moveState(td.stateId, snapped);
+        setSnapGuides(computeSnapGuides(snapped, td.stateId, useAutomatonStore.getState().automaton.states));
+      } else if (td.type === 'pan') {
+        const dx = clientX - panStart.current.x;
+        const dy = clientY - panStart.current.y;
+        const currentZoom = useAutomatonStore.getState().automaton.viewport.zoom;
+        setViewport({
+          panX: panStart.current.panX + dx,
+          panY: panStart.current.panY + dy,
+          zoom: currentZoom,
+        });
+      }
+    },
+
+    onDragEnd: (_clientX, _clientY) => {
+      const td = touchDragRef.current;
+      if (td?.type === 'state' && td.preDragAutomaton) {
+        useHistoryStore.getState().pushState(td.preDragAutomaton);
+      }
+      setSnapGuides([]);
+      touchDragRef.current = null;
+    },
+
+    onPinchStart: (centerX, centerY, distance) => {
+      const vp = useAutomatonStore.getState().automaton.viewport;
+      pinchRef.current = {
+        startZoom: vp.zoom,
+        startPanX: vp.panX,
+        startPanY: vp.panY,
+        startCenterX: centerX,
+        startCenterY: centerY,
+        initialDist: distance,
+      };
+    },
+
+    onPinchMove: (centerX, centerY, distance) => {
+      if (!pinchRef.current || !svgRef.current) return;
+      const { startZoom, startPanX, startPanY, startCenterX, startCenterY, initialDist } = pinchRef.current;
+      if (initialDist === 0) return;
+      const scale = distance / initialDist;
+      const newZoom = Math.max(0.2, Math.min(5, startZoom * scale));
+
+      const svg = svgRef.current;
+      const rect = svg.getBoundingClientRect();
+      const mx = startCenterX - rect.left;
+      const my = startCenterY - rect.top;
+
+      // Also pan based on center movement
+      const centerDx = centerX - startCenterX;
+      const centerDy = centerY - startCenterY;
+
+      setViewport({
+        panX: mx - (mx - startPanX) * (newZoom / startZoom) + centerDx,
+        panY: my - (my - startPanY) * (newZoom / startZoom) + centerDy,
+        zoom: newZoom,
+      });
+    },
+
+    onPinchEnd: () => {
+      pinchRef.current = null;
+    },
+  };
+
+  const nullRef = useRef<SVGSVGElement | null>(null);
+  useTouchCanvas(touchCallbacks, isMobile ? svgRef : nullRef);
+
   // Compute simulation status for each state
   const getSimStatus = (stateId: string): SimulationStatus => {
     if (!simSnapshot) return null;
@@ -530,6 +788,7 @@ export function AutomataCanvas() {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleCanvasMouseLeave}
         onWheel={handleWheel}
+        style={isMobile ? { touchAction: 'none' } : undefined}
         data-testid="automata-canvas"
       >
         <GridBackground />
@@ -623,7 +882,8 @@ export function AutomataCanvas() {
               isSelected={isSelected('state', state.id)}
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
-              handleAngle={handleHover?.stateId === state.id ? handleHover.angle : undefined}
+              handleAngle={!isMobile && handleHover?.stateId === state.id ? handleHover.angle : undefined}
+              showHandle={false}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
@@ -680,6 +940,15 @@ export function AutomataCanvas() {
           initialSymbols={symbolModal.existingSymbols}
           onSubmit={handleSymbolModalSubmit}
           onCancel={handleSymbolModalCancel}
+        />
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

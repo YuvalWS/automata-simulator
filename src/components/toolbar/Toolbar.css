@@ -157,3 +157,15 @@
   font-size: 13px;
   color: var(--color-text-secondary);
 }
+
+/* Phone toolbar: slim top bar */
+.toolbar-phone {
+  gap: 4px;
+  padding: 0 4px;
+}
+
+/* Tablet toolbar: condensed */
+.toolbar-tablet {
+  gap: 6px;
+  padding: 0 6px;
+}

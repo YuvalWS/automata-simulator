@@ -2,22 +2,19 @@ import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
-import { useTabStore, isTabEmpty, setActiveTabFileHandle } from '@/stores/tab-store';
-import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
-import { clearAutosave } from '@/hooks/use-autosave';
 import { useTheme } from '@/hooks/use-theme';
+import { useViewport } from '@/hooks/use-viewport';
+import { useFileOperations } from '@/hooks/use-file-operations';
 import { computeFitViewport } from '@/utils/fit-viewport';
-import { exportAutomatonAsPng } from '@/services/export/png-export';
+import { HamburgerMenu } from '@/components/mobile/HamburgerMenu';
+import { TabDropdown } from '@/components/mobile/TabDropdown';
 import './Toolbar.css';
 
 export function Toolbar() {
-  const setDirty = useEditorStore((s) => s.setDirty);
   const startPlacingState = useEditorStore((s) => s.startPlacingState);
   const placingNewState = useEditorStore((s) => s.placingNewState);
   const automaton = useAutomatonStore((s) => s.automaton);
-  const setAutomaton = useAutomatonStore((s) => s.setAutomaton);
   const setViewport = useAutomatonStore((s) => s.setViewport);
-  const newAutomaton = useAutomatonStore((s) => s.newAutomaton);
   const undo = useAutomatonStore((s) => s.undo);
   const redo = useAutomatonStore((s) => s.redo);
   const hasPast = useHistoryStore((s) => s.past.length > 0);
@@ -26,49 +23,10 @@ export function Toolbar() {
   const enterSimulation = useSimulationStore((s) => s.enterSimulation);
   const exitSimulation = useSimulationStore((s) => s.exitSimulation);
   const { theme, toggleTheme } = useTheme();
+  const { isPhone, isDesktop } = useViewport();
+  const { handleNew, handleSave, handleLoad, handleExportPng } = useFileOperations();
 
   const { panX, panY, zoom } = automaton.viewport;
-
-  const handleNew = () => {
-    if (automaton.states.length > 0 && !confirm('Create new automaton? Unsaved changes will be lost.')) {
-      return;
-    }
-    newAutomaton();
-    clearAutosave();
-    clearFileHandle();
-    setDirty(false);
-  };
-
-  const handleSave = () => {
-    saveToJsonFile(automaton);
-    setDirty(false);
-  };
-
-  const handleExportPng = async () => {
-    const svg = document.querySelector('.automata-canvas') as SVGSVGElement | null;
-    if (!svg) return;
-    try {
-      await exportAutomatonAsPng(svg, automaton.states);
-    } catch {
-      // Export failed silently
-    }
-  };
-
-  const handleLoad = async () => {
-    const result = await loadFromJsonFile();
-    if (!result) return;
-    const { automaton: loaded, fileHandle } = result;
-    const activeId = useTabStore.getState().activeTabId;
-    if (isTabEmpty(activeId)) {
-      // Load into current empty tab
-      setAutomaton(loaded);
-      if (fileHandle) setActiveTabFileHandle(fileHandle);
-      setDirty(false);
-    } else {
-      // Open in new tab
-      useTabStore.getState().createTab(loaded, fileHandle);
-    }
-  };
 
   const handleFitToContent = () => {
     const svg = document.querySelector('.automata-canvas');
@@ -79,7 +37,6 @@ export function Toolbar() {
 
   const handleZoom = (factor: number) => {
     const newZoom = Math.max(0.2, Math.min(5, zoom * factor));
-    // Zoom relative to canvas center (approximate using viewport)
     const svg = document.querySelector('.automata-canvas');
     if (!svg) {
       setViewport({ panX, panY, zoom: newZoom });
@@ -95,6 +52,73 @@ export function Toolbar() {
     });
   };
 
+  // Phone: slim top bar with hamburger + tab dropdown + badge
+  if (isPhone) {
+    return (
+      <div className="toolbar toolbar-phone" data-testid="toolbar">
+        <HamburgerMenu />
+        <TabDropdown />
+        <span className="automaton-type-badge">{automaton.type}</span>
+      </div>
+    );
+  }
+
+  // Tablet: condensed toolbar with hamburger
+  if (!isDesktop) {
+    return (
+      <div className="toolbar toolbar-tablet" data-testid="toolbar">
+        <HamburgerMenu />
+        <div className="toolbar-group">
+          <button className="toolbar-btn" onClick={undo} disabled={!hasPast || simIsActive} title="Undo">
+            Undo
+          </button>
+          <button className="toolbar-btn" onClick={redo} disabled={!hasFuture || simIsActive} title="Redo">
+            Redo
+          </button>
+        </div>
+
+        <div className="toolbar-group toolbar-actions">
+          {!simIsActive && (
+            <button
+              className={`toolbar-btn toolbar-new-state ${placingNewState ? 'active' : ''}`}
+              onClick={() => startPlacingState()}
+              title="Add New State"
+            >
+              <span className="tool-icon">+</span>
+              <span className="tool-label">New State</span>
+            </button>
+          )}
+          <button
+            className={`toolbar-btn ${simIsActive ? 'toolbar-simulate-active' : 'toolbar-simulate'}`}
+            onClick={simIsActive ? exitSimulation : enterSimulation}
+          >
+            <span className="tool-label">{simIsActive ? 'Exit Sim' : 'Simulate'}</span>
+          </button>
+        </div>
+
+        <div className="toolbar-group toolbar-zoom">
+          <button
+            className="toolbar-btn toolbar-zoom-btn"
+            onClick={handleFitToContent}
+            disabled={automaton.states.length === 0}
+            title="Fit to Content"
+          >
+            Fit
+          </button>
+        </div>
+
+        <div className="toolbar-group toolbar-info">
+          <button className="toolbar-btn toolbar-theme-btn" onClick={toggleTheme} title="Toggle dark/light mode">
+            {theme === 'light' ? '\u263E' : '\u2600'}
+          </button>
+          <span className="automaton-type-badge">{automaton.type}</span>
+          <span className="automaton-name">{automaton.name}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: full toolbar (unchanged)
   return (
     <div className="toolbar" data-testid="toolbar">
       <div className="toolbar-group">
@@ -117,20 +141,10 @@ export function Toolbar() {
           PNG
         </button>
         <span className="toolbar-separator" />
-        <button
-          className="toolbar-btn"
-          onClick={undo}
-          disabled={!hasPast || simIsActive}
-          title="Undo (Ctrl+Z)"
-        >
+        <button className="toolbar-btn" onClick={undo} disabled={!hasPast || simIsActive} title="Undo (Ctrl+Z)">
           Undo
         </button>
-        <button
-          className="toolbar-btn"
-          onClick={redo}
-          disabled={!hasFuture || simIsActive}
-          title="Redo (Ctrl+Shift+Z)"
-        >
+        <button className="toolbar-btn" onClick={redo} disabled={!hasFuture || simIsActive} title="Redo (Ctrl+Shift+Z)">
           Redo
         </button>
       </div>
