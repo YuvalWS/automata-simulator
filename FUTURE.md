@@ -8,6 +8,7 @@
 - ~~Tab support for multiple automata~~ — tab bar UI, per-tab state isolation, per-tab file handles, multi-tab autosave, keyboard shortcuts (Ctrl+T/W/PgDn/PgUp)
 - ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
 - ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
+- ~~Mobile support~~ — full touch UI for phone (<640px) and tablet (640-1024px): bottom sheet panel, top+bottom bar, tap-tap transitions, pinch zoom, long-press context menu, hamburger menu, tab dropdown, localStorage-only on phone
 
 ## Other Ideas
 - Image export to clipboard (currently only to file) + make the export ignore selection highlights (but keep simulation trace highlights if in simulation mode)
@@ -17,7 +18,9 @@
 - Moore/Mealy machines
 - Regex to NFA conversion
 - equality testing between automata (using known algorithms)
-- mobile support with a redesigned UI for touch interactions
+- Mobile: file save/load/export on phone (currently localStorage autosave only)
+- Mobile: first-use gesture tutorial overlay
+- Mobile: multi-select on phone (currently tablet+ only)
 
 ## Maintenance Note For Claude
 - Before finishing any code change, run the project build and clear all TypeScript `TS6133` unused symbol errors instead of assuming deploy can ignore them.

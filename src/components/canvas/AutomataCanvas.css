@@ -16,6 +16,16 @@
   -webkit-user-select: none;
 }
 
+/* On mobile, prevent browser pan/zoom/scroll on the canvas container and SVG.
+   Applied via CSS in addition to inline style for iOS Safari reliability. */
+@media (max-width: 1024px) {
+  .canvas-container,
+  .canvas-container .automata-canvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+}
+
 .automata-canvas.cursor-crosshair {
   cursor: crosshair;
 }

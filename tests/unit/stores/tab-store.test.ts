@@ -16,7 +16,6 @@ import { useAutomatonStore } from '@/stores/automaton-store';
 import { useEditorStore } from '@/stores/editor-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
-import { createEmptyAutomaton } from '@/models/automaton';
 
 /**
  * Reset all stores to a clean initial state before each test.
@@ -49,7 +48,6 @@ function resetAllStores() {
   });
 
   // Reset tab store — close all tabs except one fresh one
-  const { tabs } = useTabStore.getState();
   // Close all but the first tab, then reset the first
   while (useTabStore.getState().tabs.length > 1) {
     const tabsNow = useTabStore.getState().tabs;
