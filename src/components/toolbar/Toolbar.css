@@ -88,9 +88,32 @@
   border-color: #047857;
 }
 
-.toolbar-theme-btn {
+.toolbar-icon-btn {
+  padding: 4px 8px;
+  min-width: 30px;
+  justify-content: center;
+}
+
+.toolbar-icon-btn svg {
+  flex-shrink: 0;
+}
+
+.toolbar-toggle-btn {
   font-size: 18px;
   padding: 4px 8px;
+  min-width: 30px;
+  justify-content: center;
+}
+
+.toolbar-toggle-active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.toolbar-toggle-active:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .toolbar-simulate-active {
@@ -110,33 +133,6 @@
   margin-left: 12px;
 }
 
-.toolbar-zoom {
-  gap: 2px;
-}
-
-.toolbar-zoom-btn {
-  min-width: 28px;
-  padding: 4px 6px;
-  font-size: 16px;
-  font-weight: 600;
-  justify-content: center;
-}
-
-.toolbar-zoom-display {
-  min-width: 48px;
-  text-align: center;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.toolbar-zoom-display:hover {
-  background: var(--color-bg);
-  color: var(--color-text);
-}
 
 .toolbar-info {
   margin-left: auto;
@@ -156,4 +152,16 @@
 .automaton-name {
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+/* Phone toolbar: slim top bar */
+.toolbar-phone {
+  gap: 4px;
+  padding: 0 4px;
+}
+
+/* Tablet toolbar: condensed */
+.toolbar-tablet {
+  gap: 6px;
+  padding: 0 6px;
 }

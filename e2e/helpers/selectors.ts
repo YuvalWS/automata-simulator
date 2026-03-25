@@ -45,7 +45,7 @@ export const SEL = {
   toolbarZoomIn: 'button[title="Zoom In"]',
   toolbarZoomOut: 'button[title="Zoom Out"]',
   toolbarFit: 'button[title="Fit to Content"]',
-  toolbarZoomDisplay: '.toolbar-zoom-display',
+  toolbarZoomDisplay: '.zoom-controls-display',
 
   // Canvas elements by dynamic ID
   stateById: (id: string) => `[data-testid="state-${id}"]`,
