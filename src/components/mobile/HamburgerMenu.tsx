@@ -9,8 +9,16 @@ export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const stateCount = useAutomatonStore((s) => s.automaton.states.length);
-  const { isPhone } = useViewport();
+  const { isPhone, isMobile, uiMode, setUiMode } = useViewport();
   const { theme, toggleTheme } = useTheme();
+
+  const isUiOverridden = uiMode !== 'auto';
+  const toggleUiMode = () => {
+    setUiMode(isUiOverridden ? 'auto' : (isMobile ? 'desktop' : 'touch'));
+  };
+  const uiModeLabel = isUiOverridden
+    ? (uiMode === 'touch' ? '\uD83D\uDC46 Touch Mode' : '\uD83D\uDDB1\uFE0F Desktop Mode')
+    : `Auto (${isMobile ? '\uD83D\uDC46' : '\uD83D\uDDB1\uFE0F'})`;
   const { handleNew, handleSave, handleLoad, handleExportPng } = useFileOperations();
 
   useEffect(() => {
@@ -63,6 +71,9 @@ export function HamburgerMenu() {
           <div className="hamburger-separator" />
           <button className="hamburger-item" onClick={() => { toggleTheme(); setOpen(false); }}>
             {theme === 'light' ? '☾ Dark Mode' : '☀ Light Mode'}
+          </button>
+          <button className="hamburger-item" onClick={() => { toggleUiMode(); setOpen(false); }}>
+            {uiModeLabel}
           </button>
         </div>
       )}
