@@ -1,6 +1,28 @@
 # Automata Simulator
 
+> **[Try it live at automata.yuweiss.dev](https://automata.yuweiss.dev/)**
+
 A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface.
+
+<p align="center">
+  <img src="docs/demo/hero-theme.gif" alt="Automata Simulator — light & dark mode" width="720" />
+</p>
+
+### Step-by-step simulation
+
+Watch the automaton process each symbol in real time — active states glow and transitions highlight as the trace advances.
+
+<p align="center">
+  <img src="docs/demo/simulation-demo.gif" alt="Step-by-step DFA simulation" width="720" />
+</p>
+
+### Batch simulation
+
+Test multiple words at once and instantly see which are accepted or rejected.
+
+<p align="center">
+  <img src="docs/demo/batch-simulation.png" alt="Batch simulation results" width="720" />
+</p>
 
 ## Features
 

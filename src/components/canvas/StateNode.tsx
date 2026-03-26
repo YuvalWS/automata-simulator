@@ -58,6 +58,11 @@ export function StateNode({
 
   const simClass = simulationStatus ? `state-node--sim-${simulationStatus}` : '';
 
+  // Transition handle (arrow circle on state edge) — visible on hover via CSS
+  const angle = handleAngle ?? 0;
+  const hx = x + HANDLE_DISTANCE * Math.cos(angle);
+  const hy = y + HANDLE_DISTANCE * Math.sin(angle);
+
   return (
     <g
       className={`state-node ${simClass}`}
@@ -114,44 +119,39 @@ export function StateNode({
         {state.name}
       </text>
       {/* Drag handle for creating transitions — follows mouse angle around state, hidden during simulation */}
-      {!simulationStatus && (() => {
-        const angle = handleAngle ?? 0;
-        const hx = x + HANDLE_DISTANCE * Math.cos(angle);
-        const hy = y + HANDLE_DISTANCE * Math.sin(angle);
-        return (
-          <>
-            <circle
-              className="state-transition-handle"
-              cx={hx}
-              cy={hy}
-              r={HANDLE_RADIUS}
-              fill="var(--color-primary)"
-              stroke="white"
-              strokeWidth={1.5}
-              opacity={0}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onHandleDragStart(e, state.id);
-              }}
-              style={{ cursor: 'crosshair' }}
-            />
-            <text
-              className="state-transition-handle"
-              x={hx}
-              y={hy}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize="10"
-              fill="white"
-              pointerEvents="none"
-              opacity={0}
-              transform={`rotate(${angle * (180 / Math.PI)}, ${hx}, ${hy})`}
-            >
-              {'\u2192'}
-            </text>
-          </>
-        );
-      })()}
+      {!simulationStatus && (
+        <>
+          <circle
+            className="state-transition-handle"
+            cx={hx}
+            cy={hy}
+            r={HANDLE_RADIUS}
+            fill="var(--color-primary)"
+            stroke="white"
+            strokeWidth={1.5}
+            opacity={0}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onHandleDragStart(e, state.id);
+            }}
+            style={{ cursor: 'crosshair' }}
+          />
+          <text
+            className="state-transition-handle"
+            x={hx}
+            y={hy}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="10"
+            fill="white"
+            pointerEvents="none"
+            opacity={0}
+            transform={`rotate(${angle * (180 / Math.PI)}, ${hx}, ${hy})`}
+          >
+            {'\u2192'}
+          </text>
+        </>
+      )}
     </g>
   );
 }

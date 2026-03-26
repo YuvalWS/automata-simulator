@@ -93,7 +93,20 @@ function buildDfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
     currentStateId = transition.targetId;
     const isLast = i === word.length - 1;
     const currentState = automaton.states.find((s) => s.id === currentStateId);
-    const accepted = isLast && currentState?.isAccepting;
+
+    if (!currentState) {
+      // Target state doesn't exist — treat as dead end
+      snapshots.push({
+        step: i + 1,
+        symbolIndex: i,
+        activeStateIds: [],
+        traversedTransitionIds: [transition.id],
+        status: 'rejected',
+      });
+      return { word, snapshots };
+    }
+
+    const accepted = isLast && currentState.isAccepting;
 
     snapshots.push({
       step: i + 1,
@@ -150,8 +163,11 @@ function buildNfaTrace(automaton: Automaton, word: string[]): SimulationTrace {
     for (const stateId of activeStateIds) {
       for (const t of automaton.transitions) {
         if (t.sourceId === stateId && t.symbols.includes(symbol)) {
-          nextStateIds.add(t.targetId);
-          traversedIds.push(t.id);
+          // Only follow transition if target state actually exists
+          if (automaton.states.some((s) => s.id === t.targetId)) {
+            nextStateIds.add(t.targetId);
+            traversedIds.push(t.id);
+          }
         }
       }
     }

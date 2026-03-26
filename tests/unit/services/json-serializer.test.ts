@@ -1,3 +1,11 @@
+/**
+ * Tests for json-serializer.ts
+ *
+ * The serializer converts automata to/from JSON for saving and loading files.
+ * It wraps automata in a versioned SaveFile envelope and validates structure
+ * via Zod schema. Correct serialization is critical — bugs here cause data loss
+ * or corrupt file loads.
+ */
 import { describe, it, expect } from 'vitest';
 import { serializeToJson, deserializeFromJson } from '@/services/serialization/json-serializer';
 import type { Automaton } from '@/models/automaton';
@@ -90,6 +98,38 @@ describe('JSON serializer', () => {
     const original = createTestAutomaton();
     const obj = JSON.parse(serializeToJson(original));
     obj.automaton.viewport.zoom = -1;
+    expect(() => deserializeFromJson(JSON.stringify(obj))).toThrow();
+  });
+
+  // --- Additional edge cases ---
+
+  it('rejects file with missing states array', () => {
+    const original = createTestAutomaton();
+    const obj = JSON.parse(serializeToJson(original));
+    delete obj.automaton.states;
+    expect(() => deserializeFromJson(JSON.stringify(obj))).toThrow();
+  });
+
+  it('round-trips automaton with empty alphabet', () => {
+    const original = createTestAutomaton();
+    original.alphabet = [];
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+    expect(restored.alphabet).toEqual([]);
+  });
+
+  it('round-trips NFA type correctly', () => {
+    const original = createTestAutomaton();
+    original.type = AutomatonType.NFA;
+    const json = serializeToJson(original);
+    const restored = deserializeFromJson(json);
+    expect(restored.type).toBe(AutomatonType.NFA);
+  });
+
+  it('rejects zero zoom', () => {
+    const original = createTestAutomaton();
+    const obj = JSON.parse(serializeToJson(original));
+    obj.automaton.viewport.zoom = 0;
     expect(() => deserializeFromJson(JSON.stringify(obj))).toThrow();
   });
 });

@@ -160,3 +160,17 @@
 .shortcuts-credits-sep {
   color: var(--color-text-secondary);
 }
+
+/* Mobile: position above bottom bar (56px + safe area) */
+.shortcuts-container-mobile {
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+.shortcuts-container-mobile .shortcuts-panel {
+  max-height: 60vh;
+}
+
+.shortcuts-container-mobile .shortcut-key kbd {
+  font-size: 12px;
+  padding: 2px 8px;
+}

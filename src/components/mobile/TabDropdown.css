@@ -1,0 +1,136 @@
+.tab-dropdown {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-family);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-dropdown-btn:active {
+  background: var(--color-bg);
+}
+
+.tab-dropdown-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.tab-dropdown-arrow {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tab-dropdown-dirty {
+  color: var(--color-primary);
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.tab-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  padding: 4px 0;
+  animation: tab-dropdown-fade-in 0.15s ease;
+}
+
+@keyframes tab-dropdown-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-dropdown-item {
+  display: flex;
+  align-items: center;
+}
+
+.tab-dropdown-item-active {
+  background: var(--color-bg);
+}
+
+.tab-dropdown-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-dropdown-item-btn:active {
+  background: var(--color-bg);
+}
+
+.tab-dropdown-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-dropdown-close:active {
+  background: var(--color-bg);
+  color: var(--color-danger);
+}
+
+.tab-dropdown-separator {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+.tab-dropdown-new {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .tab-dropdown-list {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}

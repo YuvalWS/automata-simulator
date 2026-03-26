@@ -81,8 +81,9 @@ function resolveOverlaps(paths: EdgePath[]): void {
 }
 
 /**
- * Compute the best angle for a self-loop by placing it opposite to the
- * average direction of all other edges connected to this state.
+ * Compute the best angle for a self-loop by finding the largest angular gap
+ * between all other edges connected to this state (including the initial arrow)
+ * and placing the self-loop in the middle of that gap.
  * Returns the base angle in radians (0 = right, -PI/2 = top, PI/2 = bottom).
  */
 function bestSelfLoopAngle(
@@ -116,14 +117,28 @@ function bestSelfLoopAngle(
 
   if (angles.length === 0) return -Math.PI / 2; // default: top
 
-  // Average angle of connected edges
-  const avgAngle = Math.atan2(
-    angles.reduce((s, a) => s + Math.sin(a), 0),
-    angles.reduce((s, a) => s + Math.cos(a), 0),
-  );
+  // Normalize angles to [0, 2π) and sort
+  const TWO_PI = 2 * Math.PI;
+  const sorted = angles
+    .map((a) => ((a % TWO_PI) + TWO_PI) % TWO_PI)
+    .sort((a, b) => a - b);
 
-  // Place self-loop opposite to the average
-  return avgAngle + Math.PI;
+  // Find the largest angular gap between consecutive occupied angles
+  let bestGap = 0;
+  let bestMid = -Math.PI / 2; // default: top
+
+  for (let i = 0; i < sorted.length; i++) {
+    const current = sorted[i]!;
+    const next = sorted[(i + 1) % sorted.length]!;
+    const gap = i + 1 < sorted.length ? next - current : next + TWO_PI - current;
+
+    if (gap > bestGap) {
+      bestGap = gap;
+      bestMid = current + gap / 2;
+    }
+  }
+
+  return bestMid;
 }
 
 export function computeEdgePaths(

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useViewport } from '@/hooks/use-viewport';
 import './ShortcutsTooltip.css';
 
 const shortcuts = [
@@ -24,13 +25,23 @@ const simShortcuts = [
   { key: 'Escape', action: 'Exit simulation' },
 ];
 
-const instructions = [
+const touchGestures = [
+  { gesture: 'Tap', action: 'Select state or transition' },
+  { gesture: 'Double-tap state', action: 'Create self-loop' },
+  { gesture: 'Double-tap transition', action: 'Edit symbols' },
+  { gesture: 'Long-press', action: 'Context menu (delete, toggle accepting/initial)' },
+  { gesture: 'Drag state', action: 'Move state' },
+  { gesture: 'Drag empty area', action: 'Pan canvas' },
+  { gesture: 'Pinch', action: 'Zoom in/out' },
+];
+
+const desktopInstructions = [
   'Click "+ New State" or press N, then click the canvas to place a state.',
   'Click a state, then click another state within 3s to create a transition.',
   'Double-click a state to create a self-loop.',
   'Drag the arrow handle (appears on hover) from one state to another, or to empty space to create a new state.',
   'Double-click a transition to edit its symbols.',
-  'Drag states to move them — they snap to alignment with other states.',
+  'Drag states to move them \u2014 they snap to alignment with other states.',
   'Shift+click states to add/remove from multi-selection. Shift+drag on canvas for rubber-band selection.',
   'Scroll to zoom, drag empty canvas to pan.',
   'Select element(s) and press Delete to remove them. Ctrl+A to select all.',
@@ -43,10 +54,28 @@ const instructions = [
   'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
 ];
 
+const mobileInstructions = [
+  'Tap "+ State" in the bottom bar, then tap the canvas to place a state.',
+  'Tap a state, then tap another state within 3s to create a transition.',
+  'Double-tap a state to create a self-loop.',
+  'Tap the arrow handle on a state to start a transition, then tap the target state.',
+  'Double-tap a transition to edit its symbols.',
+  'Drag states to move them \u2014 they snap to alignment with other states.',
+  'Long-press a state or transition for a context menu (delete, toggle accepting/initial).',
+  'Pinch to zoom, drag empty canvas to pan.',
+  'Select an element and tap Delete in the bottom bar to remove it.',
+  'Tap Simulate in the bottom bar to enter simulation mode.',
+  'Use "Random" to generate a random word from the alphabet.',
+  'Switch to Batch mode to test multiple words at once.',
+  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
+];
+
 export function ShortcutsTooltip() {
   const [isOpen, setIsOpen] = useState(() => {
     return !localStorage.getItem('automata-help-seen');
   });
+
+  const { isMobile } = useViewport();
 
   useEffect(() => {
     if (isOpen && !localStorage.getItem('automata-help-seen')) {
@@ -58,17 +87,23 @@ export function ShortcutsTooltip() {
 
   useEffect(() => {
     if (!isOpen) return;
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent | TouchEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, [isOpen]);
 
+  const instructions = isMobile ? mobileInstructions : desktopInstructions;
+
   return (
-    <div className="shortcuts-container" ref={containerRef}>
+    <div className={`shortcuts-container ${isMobile ? 'shortcuts-container-mobile' : ''}`} ref={containerRef}>
       {isOpen && (
         <div className="shortcuts-panel">
           <button
@@ -78,32 +113,54 @@ export function ShortcutsTooltip() {
           >
             ×
           </button>
-          <div className="shortcuts-section">
-            <h4 className="shortcuts-heading">Keyboard Shortcuts</h4>
-            <table className="shortcuts-table">
-              <tbody>
-                {shortcuts.map((s) => (
-                  <tr key={s.key}>
-                    <td className="shortcut-key"><kbd>{s.key}</kbd></td>
-                    <td className="shortcut-action">{s.action}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="shortcuts-section">
-            <h4 className="shortcuts-heading">During Simulation</h4>
-            <table className="shortcuts-table">
-              <tbody>
-                {simShortcuts.map((s) => (
-                  <tr key={s.key}>
-                    <td className="shortcut-key"><kbd>{s.key}</kbd></td>
-                    <td className="shortcut-action">{s.action}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+          {!isMobile && (
+            <>
+              <div className="shortcuts-section">
+                <h4 className="shortcuts-heading">Keyboard Shortcuts</h4>
+                <table className="shortcuts-table">
+                  <tbody>
+                    {shortcuts.map((s) => (
+                      <tr key={s.key}>
+                        <td className="shortcut-key"><kbd>{s.key}</kbd></td>
+                        <td className="shortcut-action">{s.action}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="shortcuts-section">
+                <h4 className="shortcuts-heading">During Simulation</h4>
+                <table className="shortcuts-table">
+                  <tbody>
+                    {simShortcuts.map((s) => (
+                      <tr key={s.key}>
+                        <td className="shortcut-key"><kbd>{s.key}</kbd></td>
+                        <td className="shortcut-action">{s.action}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {isMobile && (
+            <div className="shortcuts-section">
+              <h4 className="shortcuts-heading">Touch Gestures</h4>
+              <table className="shortcuts-table">
+                <tbody>
+                  {touchGestures.map((g) => (
+                    <tr key={g.gesture}>
+                      <td className="shortcut-key"><kbd>{g.gesture}</kbd></td>
+                      <td className="shortcut-action">{g.action}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <div className="shortcuts-section">
             <h4 className="shortcuts-heading">How to Use</h4>
             <ul className="shortcuts-instructions">
@@ -125,7 +182,7 @@ export function ShortcutsTooltip() {
       <button
         className="shortcuts-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        title="Keyboard shortcuts & help"
+        title={isMobile ? 'Touch gestures & help' : 'Keyboard shortcuts & help'}
       >
         ?
       </button>

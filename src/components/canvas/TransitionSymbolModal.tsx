@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { EPSILON } from '@/models/epsilon';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
+import { useViewport } from '@/hooks/use-viewport';
 import './TransitionSymbolModal.css';
 
 interface TransitionSymbolModalProps {
@@ -15,6 +16,7 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
   const [value, setValue] = useState(initialSymbols?.join(', ') ?? '');
   const inputRef = useRef<HTMLInputElement>(null);
   const isDFA = useAutomatonStore((s) => s.automaton.type) === AutomatonType.DFA;
+  const { isMobile } = useViewport();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -38,16 +40,18 @@ export function TransitionSymbolModal({ position, initialSymbols, onSubmit, onCa
     }
   };
 
-  // Clamp position to viewport
-  const x = Math.min(position.x, window.innerWidth - 260);
-  const y = Math.min(position.y, window.innerHeight - 120);
+  // On mobile, center the modal; on desktop, clamp to viewport near the click
+  const modalStyle: React.CSSProperties = isMobile
+    ? { left: '50%', top: '40%', transform: 'translate(-50%, -50%)' }
+    : { left: Math.min(position.x, window.innerWidth - 260), top: Math.min(position.y, window.innerHeight - 120) };
 
   return (
-    <div className="symbol-modal-overlay" onMouseDown={onCancel}>
+    <div className="symbol-modal-overlay" onMouseDown={onCancel} onTouchStart={onCancel}>
       <div
         className="symbol-modal"
-        style={{ left: x, top: y }}
+        style={modalStyle}
         onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         <div className="symbol-modal-title">
           {initialSymbols ? 'Edit Transition Symbols' : 'Enter Transition Symbols'}

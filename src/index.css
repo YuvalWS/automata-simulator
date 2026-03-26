@@ -121,3 +121,25 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-secondary);
 }
+
+/* Tablet: narrower panel */
+@media (min-width: 640px) and (max-width: 1024px) {
+  :root {
+    --panel-width: 240px;
+  }
+
+  .tab-bar {
+    height: 40px;
+  }
+
+  .tab-item {
+    min-height: 40px;
+  }
+
+  .tab-close-btn {
+    opacity: 1;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 16px;
+  }
+}

@@ -1,6 +1,15 @@
+/**
+ * Tests for simulation-store.ts
+ *
+ * The simulation store manages the simulation lifecycle: entering/exiting
+ * simulation mode, running single-word traces with step navigation,
+ * and batch mode for testing multiple words at once. It orchestrates
+ * the simulator service and validator, gating simulation on validation.
+ */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
+import { AutomatonType } from '@/models/types';
 
 
 function setupDfa() {
@@ -217,18 +226,70 @@ describe('simulation store', () => {
       expect(useSimulationStore.getState().batchResults).toBeNull();
     });
 
-    it('handles empty word (epsilon) in batch', () => {
+    it('batch ignores empty lines and only processes non-empty words', () => {
       useSimulationStore.getState().setBatchMode(true);
-      // Empty line between words - the filter removes it, so use explicit empty test
-      // Actually the empty line is filtered out. Let's test with just a single empty-equivalent
-      // Since we filter empty lines, an empty word must be tested as a line with just whitespace
-      // The parseWord('') returns [], which is the empty word
-      useSimulationStore.getState().setBatchInput('a');
+      // Empty lines between words are filtered out by runBatch
+      useSimulationStore.getState().setBatchInput('a\n\n\nb');
       useSimulationStore.getState().runBatch();
 
       const results = useSimulationStore.getState().batchResults!;
-      expect(results).toHaveLength(1);
+      // Only 'a' and 'b' should be processed — empty lines skipped
+      expect(results).toHaveLength(2);
+      expect(results[0]!.word).toEqual(['a']);
       expect(results[0]!.status).toBe('accepted');
+      expect(results[1]!.word).toEqual(['b']);
+      expect(results[1]!.status).toBe('rejected');
+    });
+  });
+
+  // --- Additional edge cases ---
+
+  describe('NFA simulation through store', () => {
+    it('NFA simulation with epsilon transitions works through the store', () => {
+      // Set up a simple NFA with epsilon: q0 --ε--> q1(accept)
+      useAutomatonStore.getState().newAutomaton('Test NFA');
+      useAutomatonStore.getState().setType(AutomatonType.NFA);
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().toggleAccepting(q1.id);
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, ['\u03B5']);
+
+      useSimulationStore.getState().enterSimulation();
+      useSimulationStore.getState().setWordInput('');
+      useSimulationStore.getState().startSimulation();
+
+      const { trace } = useSimulationStore.getState();
+      expect(trace).not.toBeNull();
+      // Empty word with epsilon to accepting state
+      const lastSnap = trace!.snapshots[trace!.snapshots.length - 1]!;
+      expect(lastSnap.status).toBe('accepted');
+    });
+  });
+
+  describe('goToStep edge cases', () => {
+    it('goToStep with negative value clamps to 0', () => {
+      setupDfa();
+      useSimulationStore.getState().enterSimulation();
+      useSimulationStore.getState().setWordInput('a');
+      useSimulationStore.getState().startSimulation();
+
+      useSimulationStore.getState().goToStep(-5);
+      expect(useSimulationStore.getState().currentStep).toBe(0);
+    });
+  });
+
+  describe('empty word simulation', () => {
+    it('starting simulation with empty word input runs trace on empty word', () => {
+      setupDfa();
+      useSimulationStore.getState().enterSimulation();
+      useSimulationStore.getState().setWordInput('');
+      useSimulationStore.getState().startSimulation();
+
+      // Empty word on this DFA: q0 is not accepting, so rejected
+      const { trace } = useSimulationStore.getState();
+      expect(trace).not.toBeNull();
+      expect(trace!.snapshots).toHaveLength(1);
+      expect(trace!.snapshots[0]!.status).toBe('rejected');
     });
   });
 });
