@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AutomataCanvas } from './components/canvas/AutomataCanvas';
 import { Toolbar } from './components/toolbar/Toolbar';
+import { ZoomControls } from './components/toolbar/ZoomControls';
 import { TabBar } from './components/tabs/TabBar';
 import { PropertiesPanel } from './components/panels/PropertiesPanel';
 import { SimulationPanel } from './components/panels/SimulationPanel';
@@ -53,6 +54,7 @@ export default function App() {
       {!isPhone && <TabBar />}
       <div className="app-main">
         <AutomataCanvas />
+        {!isPhone && <ZoomControls />}
         {(isDesktop || isTablet) && panel}
       </div>
       {isPhone && (

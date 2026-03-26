@@ -9,7 +9,8 @@ export default defineConfig({
   reporter: 'html',
   timeout: 30000,
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'https://localhost:5173',
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Dismiss help panel by default so it doesn't overlap other UI elements.
@@ -17,7 +18,7 @@ export default defineConfig({
     storageState: {
       cookies: [],
       origins: [{
-        origin: 'http://localhost:5173',
+        origin: 'https://localhost:5173',
         localStorage: [{ name: 'automata-help-seen', value: '1' }],
       }],
     },
@@ -30,7 +31,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    port: 5173,
+    url: 'https://localhost:5173',
+    ignoreHTTPSErrors: true,
     reuseExistingServer: !process.env.CI,
   },
 });

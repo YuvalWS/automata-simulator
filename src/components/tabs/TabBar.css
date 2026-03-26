@@ -13,7 +13,6 @@
   align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
-  flex: 1;
   min-width: 0;
   scrollbar-width: none;
 }

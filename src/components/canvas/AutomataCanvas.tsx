@@ -655,7 +655,19 @@ export function AutomataCanvas() {
             { label: 'Delete Transition', action: () => { removeTransition(transition.id); clearSelection(); }, danger: true },
           ],
         });
+        return;
       }
+
+      // Long press on empty space: offer to create a new state at that point
+      const addState = useAutomatonStore.getState().addState;
+      const point = getSvgPoint(clientX, clientY);
+      setContextMenu({
+        x: clientX,
+        y: clientY,
+        items: [
+          { label: 'New State Here', action: () => { addState(point); } },
+        ],
+      });
     },
 
     onDragStart: (clientX, clientY, _target) => {
@@ -884,6 +896,7 @@ export function AutomataCanvas() {
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
               handleAngle={!isMobile && handleHover?.stateId === state.id ? handleHover.angle : undefined}
+              showHandle={false}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
