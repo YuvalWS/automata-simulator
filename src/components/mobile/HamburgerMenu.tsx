@@ -9,7 +9,7 @@ export function HamburgerMenu() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const stateCount = useAutomatonStore((s) => s.automaton.states.length);
-  const { isPhone, isMobile, uiMode, setUiMode } = useViewport();
+  const { isMobile, uiMode, setUiMode } = useViewport();
   const { theme, toggleTheme } = useTheme();
 
   const isUiOverridden = uiMode !== 'auto';
@@ -51,23 +51,19 @@ export function HamburgerMenu() {
           <button className="hamburger-item" onClick={() => { handleNew(); setOpen(false); }}>
             New Automaton
           </button>
-          {!isPhone && (
-            <>
-              <button className="hamburger-item" onClick={() => { handleSave(); setOpen(false); }}>
-                Save
-              </button>
-              <button className="hamburger-item" onClick={async () => { await handleLoad(); setOpen(false); }}>
-                Load
-              </button>
-              <button
-                className="hamburger-item"
-                onClick={async () => { await handleExportPng(); setOpen(false); }}
-                disabled={stateCount === 0}
-              >
-                Export PNG
-              </button>
-            </>
-          )}
+          <button className="hamburger-item" onClick={() => { handleSave(); setOpen(false); }}>
+            Save
+          </button>
+          <button className="hamburger-item" onClick={async () => { await handleLoad(); setOpen(false); }}>
+            Load
+          </button>
+          <button
+            className="hamburger-item"
+            onClick={async () => { await handleExportPng(); setOpen(false); }}
+            disabled={stateCount === 0}
+          >
+            Export PNG
+          </button>
           <div className="hamburger-separator" />
           <button className="hamburger-item" onClick={() => { toggleTheme(); setOpen(false); }}>
             {theme === 'light' ? '☾ Dark Mode' : '☀ Light Mode'}

@@ -9,6 +9,7 @@
 - ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
 - ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
 - ~~Mobile support~~ — full touch UI for phone (<640px) and tablet (640-1024px): bottom sheet panel, top+bottom bar, tap-tap transitions, pinch zoom, long-press context menu, hamburger menu, tab dropdown, localStorage-only on phone
+- ~~Mobile file save/load/export on phone~~ — enabled Save/Load/Export PNG in phone hamburger menu; existing fallback chain handles iOS Safari (file-saver download) and Android Chrome (File System Access API)
 
 ## Other Ideas
 - Image export to clipboard (currently only to file) + make the export ignore selection highlights (but keep simulation trace highlights if in simulation mode)
@@ -18,9 +19,9 @@
 - Moore/Mealy machines
 - Regex to NFA conversion
 - equality testing between automata (using known algorithms)
-- Mobile: file save/load/export on phone (currently localStorage autosave only)
 - Mobile: first-use gesture tutorial overlay
 - Mobile: multi-select on phone (currently tablet+ only)
+- hide epsilon button when in DFA mode, since it has no meaning there
 
 ## Maintenance Note For Claude
 - Before finishing any code change, run the project build and clear all TypeScript `TS6133` unused symbol errors instead of assuming deploy can ignore them.
