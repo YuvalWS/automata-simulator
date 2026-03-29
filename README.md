@@ -2,7 +2,7 @@
 
 > **[Try it live at automata.yuweiss.dev](https://automata.yuweiss.dev/)**
 
-A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface.
+A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface. Works on desktop, tablet, and phone with full touch support.
 
 <p align="center">
   <img src="docs/demo/hero-theme.gif" alt="Automata Simulator — light & dark mode" width="720" />
@@ -53,9 +53,15 @@ Test multiple words at once and instantly see which are accepted or rejected.
 - **Intuitive interactions** — click two states to create a transition; double-click for self-loop; drag handle on hover; drag handle to empty space to create a state + transition
 - **Multi-select** — Shift+click to toggle states in selection; Shift+drag on canvas for rubber-band selection; group drag moves all selected states together
 - **Help tooltip** — `?` button at bottom-right shows all keyboard shortcuts, instructions, and credits; auto-opens on first visit
-- **Mobile warning** — displays a message on small screens (< 768px) that the app requires a desktop browser
+- **Mobile & touch support** — fully responsive touch UI for phones (< 640px) and tablets (640–1024px):
+  - **Phone layout** — bottom sheet panel, top bar with hamburger menu and tab dropdown, bottom bar with edit/simulate actions
+  - **Tablet layout** — hamburger menu, tab bar, bottom bar, side properties panel
+  - **Touch gestures** — tap to select, double-tap for self-loop/edit symbols, long-press for context menu, pinch to zoom, drag to pan/move
+  - **Tap-tap transitions** — tap source state, then tap target within 3s to create a transition
+  - **File operations on all devices** — Save/Load/Export PNG available via hamburger menu on phone and tablet; uses native file picker on Chromium (Windows touch, Android Chrome) and file-saver fallback on iOS Safari
+  - **UI mode override** — toggle between touch and desktop UI modes from the hamburger menu
 
-## How to Use
+## How to Use (Desktop)
 
 1. **Add states** — click "+ New State" in the toolbar (or press N), then click on the canvas to place
 2. **Create transitions** — click a source state, then click a target state within 3 seconds
@@ -66,9 +72,24 @@ Test multiple words at once and instantly see which are accepted or rejected.
 7. **Move states** — drag states to reposition (they snap to alignment with other states)
 8. **Multi-select** — Shift+click states to add/remove from selection; Shift+drag on canvas for rubber-band selection; drag moves all selected states
 9. **Delete** — select element(s) and press Delete or Backspace
-9. **Undo/Redo** — Ctrl+Z to undo, Ctrl+Shift+Z to redo
-10. **Save** — click "Save" or press Ctrl+S
-11. **Load** — click "Load" or press Ctrl+O and select a JSON file
+10. **Undo/Redo** — Ctrl+Z to undo, Ctrl+Shift+Z to redo
+11. **Save** — click "Save" or press Ctrl+S
+12. **Load** — click "Load" or press Ctrl+O and select a JSON file
+
+## How to Use (Mobile / Touch)
+
+1. **Add states** — tap "+ State" in the bottom bar, then tap the canvas to place
+2. **Create transitions** — tap a source state, then tap a target state within 3 seconds
+3. **Create self-loops** — double-tap a state
+4. **Edit transition symbols** — double-tap any transition to edit its symbols
+5. **Move states** — drag states to reposition (they snap to alignment with other states)
+6. **Context menu** — long-press a state or transition for options (delete, toggle accepting/initial)
+7. **Zoom & pan** — pinch to zoom, drag empty canvas to pan
+8. **Delete** — select an element and tap the Delete button in the bottom bar
+9. **Undo/Redo** — use the Undo/Redo buttons in the bottom bar
+10. **Save/Load** — open the hamburger menu (top-left) and tap Save or Load
+11. **Export PNG** — open the hamburger menu and tap Export PNG
+12. **Switch tabs** — use the tab dropdown (phone) or tab bar (tablet) at the top
 
 ## Simulation
 
@@ -79,7 +100,7 @@ Test multiple words at once and instantly see which are accepted or rejected.
 5. Switch to **Batch** mode to test multiple words at once (one per line)
 6. Press **Escape** or click **Exit Sim** to return to editing
 
-## Keyboard Shortcuts
+## Keyboard Shortcuts (Desktop)
 
 | Key | Action |
 |-----|--------|
@@ -105,6 +126,18 @@ Test multiple words at once and instantly see which are accepted or rejected.
 | Enter | Toggle auto-run |
 | Left / Right arrow | Step backward / forward |
 | Escape | Exit simulation |
+
+## Touch Gestures (Mobile / Tablet)
+
+| Gesture | Action |
+|---------|--------|
+| Tap | Select state or transition |
+| Double-tap state | Create self-loop |
+| Double-tap transition | Edit symbols |
+| Long-press | Context menu (delete, toggle accepting/initial) |
+| Drag state | Move state |
+| Drag empty area | Pan canvas |
+| Pinch | Zoom in/out |
 
 ## Quick Start (Docker)
 
@@ -142,16 +175,17 @@ src/
 │   ├── canvas/    # SVG rendering: states, transitions, arrows, grid, symbol modal
 │   ├── toolbar/   # File operations, new state button, undo/redo
 │   ├── panels/    # Properties panel for editing selected elements
-│   └── help/      # Keyboard shortcuts tooltip
+│   ├── mobile/    # Phone/tablet UI: hamburger menu, bottom bar, bottom sheet, tab dropdown
+│   └── help/      # Keyboard shortcuts & touch gestures tooltip
 ├── services/
 │   ├── serialization/  # JSON save & load with Zod validation
 │   ├── layout/         # Edge routing, Bezier curves, label overlap avoidance, self-loop placement
 │   ├── simulation/     # DFA/NFA trace engine, pre-simulation validator
 │   └── export/         # PNG image export
-├── hooks/         # Keyboard shortcuts, auto-save, unsaved warning, theme
+├── hooks/         # Keyboard shortcuts, touch canvas, auto-save, unsaved warning, theme, viewport detection
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 233 tests covering simulation, stores, serializers, edge-routing, utils
+├── unit/          # 305 tests covering simulation, stores, serializers, edge-routing, touch, utils
 ```
 
 ## Auto-save

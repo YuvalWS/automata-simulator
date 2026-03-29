@@ -203,10 +203,18 @@ When generating automata for visual display:
 
 ## How to Use Generated JSON
 
+### Desktop
 1. Save the JSON to a `.json` file
 2. Open https://automata.yuweiss.dev
 3. Click "Load" (or press Ctrl+O) and select the file
 4. The automaton will render with all states, transitions, and layout preserved
+
+### Mobile / Tablet
+1. Save the JSON to a `.json` file
+2. Open https://automata.yuweiss.dev on your phone or tablet
+3. Tap the hamburger menu (top-left) and tap "Load"
+4. Select the JSON file from your device
+5. The automaton will render with full touch interaction support (tap, drag, pinch-zoom, long-press)
 
 ## Describing Automata in Natural Language
 

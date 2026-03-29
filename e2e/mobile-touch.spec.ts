@@ -44,15 +44,15 @@ test.describe('Mobile Touch UI - Phone', () => {
     await expect(page.locator('[data-testid="tab-bar"]')).not.toBeVisible();
   });
 
-  test('hamburger menu opens and shows items', async ({ page }) => {
+  test('hamburger menu opens and shows all file operations', async ({ page }) => {
     await page.locator('[data-testid="hamburger-btn"]').click();
     const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
     await expect(dropdown).toBeVisible();
-    // Phone should NOT have Save/Load/PNG
-    await expect(dropdown.locator('text=Save')).not.toBeVisible();
-    await expect(dropdown.locator('text=Load')).not.toBeVisible();
-    // Should have New Automaton and theme toggle
+    // Phone should have Save/Load/Export PNG (same as tablet)
     await expect(dropdown.locator('text=New Automaton')).toBeVisible();
+    await expect(dropdown.locator('text=Save')).toBeVisible();
+    await expect(dropdown.locator('text=Load')).toBeVisible();
+    await expect(dropdown.locator('text=Export PNG')).toBeVisible();
   });
 
   test('tab dropdown opens and shows tabs', async ({ page }) => {
