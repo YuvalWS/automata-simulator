@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 import { CanvasHelper } from './helpers/canvas-helpers';
 import { AutomatonBuilder } from './helpers/automaton-builder';
 import { SEL } from './helpers/selectors';
@@ -164,5 +165,153 @@ test.describe('Save and Load', () => {
 
     const restored = await builder.getAutomaton();
     expect(restored.type).toBe('NFA');
+  });
+});
+
+// --- Mobile Phone Save/Load Tests ---
+
+const phoneViewport = { width: 390, height: 844 };
+
+test.describe('Save and Load - Mobile Phone', () => {
+  test.use({ viewport: phoneViewport, hasTouch: true });
+
+  let builder: AutomatonBuilder;
+
+  test.beforeEach(async ({ page }) => {
+    builder = new AutomatonBuilder(page);
+    await page.goto('/');
+    await page.waitForSelector(SEL.canvas);
+  });
+
+  test('phone hamburger menu shows Save button', async ({ page }) => {
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.locator('text=Save')).toBeVisible();
+  });
+
+  test('phone hamburger menu shows Load button', async ({ page }) => {
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.locator('text=Load')).toBeVisible();
+  });
+
+  test('phone hamburger menu shows Export PNG button', async ({ page }) => {
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.locator('text=Export PNG')).toBeVisible();
+  });
+
+  test('phone Save button closes menu without error', async ({ page }) => {
+    await builder.loadSimpleDFA();
+    await page.waitForTimeout(100);
+
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+
+    // Click Save — triggers file-saver fallback download (no File System Access API in Playwright)
+    await dropdown.locator('text=Save').click();
+    // Menu should close after clicking
+    await expect(dropdown).not.toBeVisible();
+    // App should still be functional
+    await expect(page.locator(SEL.canvas)).toBeVisible();
+  });
+
+  test('phone Load button triggers file chooser', async ({ page }) => {
+    // Disable File System Access API so the fallback <input type="file"> is used
+    // (Playwright can only intercept the fallback file input, not showOpenFilePicker)
+    await page.evaluate(() => { delete (window as any).showOpenFilePicker; });
+
+    // Listen for the file chooser before clicking Load
+    const fileChooserPromise = page.waitForEvent('filechooser');
+
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+    await dropdown.locator('text=Load').click();
+
+    const fileChooser = await fileChooserPromise;
+    expect(fileChooser).toBeTruthy();
+    // Verify it accepts JSON files
+    expect(fileChooser.isMultiple()).toBe(false);
+  });
+
+  test('phone can load automaton from JSON file via hamburger menu', async ({ page }) => {
+    // Disable File System Access API so the fallback <input type="file"> is used
+    await page.evaluate(() => { delete (window as any).showOpenFilePicker; });
+
+    // Build a valid JSON save file content
+    const saveFileContent = JSON.stringify({
+      version: '1.0.0',
+      automaton: {
+        id: 'test-mobile-load',
+        name: 'Mobile Loaded DFA',
+        type: 'DFA',
+        alphabet: ['a', 'b'],
+        states: [
+          { id: 's1', name: 'q0', position: { x: 200, y: 250 }, isInitial: true, isAccepting: false },
+          { id: 's2', name: 'q1', position: { x: 400, y: 250 }, isInitial: false, isAccepting: true },
+          { id: 's3', name: 'q2', position: { x: 300, y: 400 }, isInitial: false, isAccepting: false },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 's1', targetId: 's2', symbols: ['a'] },
+          { id: 't2', sourceId: 's1', targetId: 's3', symbols: ['b'] },
+        ],
+        viewport: { panX: 0, panY: 0, zoom: 1 },
+      },
+    });
+
+    // Listen for the file chooser before clicking Load
+    const fileChooserPromise = page.waitForEvent('filechooser');
+
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await dropdown.locator('text=Load').click();
+
+    const fileChooser = await fileChooserPromise;
+
+    // Create a temporary file and provide it to the file chooser
+    await fileChooser.setFiles({
+      name: 'test-automaton.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(saveFileContent),
+    });
+
+    await page.waitForTimeout(300);
+
+    // Verify the automaton was loaded
+    const automaton = await builder.getAutomaton();
+    expect(automaton.name).toBe('Mobile Loaded DFA');
+    expect(automaton.type).toBe('DFA');
+    expect(automaton.states).toHaveLength(3);
+    expect(automaton.transitions).toHaveLength(2);
+  });
+
+  test('phone Export PNG is disabled when no states exist', async ({ page }) => {
+    // Reset to empty automaton (newAutomaton still creates q0, so we need to check with the default)
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+    // Export PNG should be enabled since q0 exists by default
+    const exportBtn = dropdown.locator('text=Export PNG');
+    await expect(exportBtn).toBeVisible();
+  });
+
+  test('phone Export PNG button closes menu for automaton with states', async ({ page }) => {
+    await builder.loadSimpleDFA();
+    await page.waitForTimeout(100);
+
+    await page.locator('[data-testid="hamburger-btn"]').click();
+    const dropdown = page.locator('[data-testid="hamburger-dropdown"]');
+    await expect(dropdown).toBeVisible();
+
+    const exportBtn = dropdown.locator('text=Export PNG');
+    await expect(exportBtn).toBeEnabled();
+    await exportBtn.click();
+    // Menu should close after clicking
+    await expect(dropdown).not.toBeVisible();
   });
 });

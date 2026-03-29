@@ -68,6 +68,8 @@ const mobileInstructions = [
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
   'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
+  'Open the hamburger menu to Save, Load, or Export PNG.',
+  'Toggle dark mode or switch between touch/desktop UI from the hamburger menu.',
 ];
 
 export function ShortcutsTooltip() {

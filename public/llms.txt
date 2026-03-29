@@ -6,7 +6,7 @@
 
 ## What This App Does
 
-Automata Simulator lets users build finite automata diagrams interactively, simulate words step-by-step with visual highlighting, and save/load their work as JSON files.
+Automata Simulator lets users build finite automata diagrams interactively, simulate words step-by-step with visual highlighting, and save/load their work as JSON files. Works on desktop, tablet, and phone with full touch support.
 
 Supported automaton types:
 - **DFA** (Deterministic Finite Automaton) — exactly one transition per symbol per state, no epsilon transitions
