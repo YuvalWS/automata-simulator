@@ -53,7 +53,7 @@ export function epsilonClosure(
 const MAX_PDA_CONFIGURATIONS = 1000;
 
 function configKey(config: PdaConfiguration): string {
-  return `${config.stateId}|${config.stack.join(',')}`;
+  return `${config.stateId}\x00${config.stack.join('\x00')}`;
 }
 
 /**
@@ -95,11 +95,6 @@ function pdaEpsilonClosure(
         }
       }
     }
-  }
-
-  // Add remaining queued items that didn't get processed
-  while (queue.length > 0) {
-    result.push(queue.pop()!);
   }
 
   return { configs: result, transitionIds: [...new Set(transitionIds)] };
