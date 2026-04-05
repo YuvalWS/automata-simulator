@@ -31,7 +31,8 @@ export function SimulationPanel() {
   const batchResults = useSimulationStore((s) => s.batchResults);
   const clearBatchResults = useSimulationStore((s) => s.clearBatchResults);
 
-  const alphabet = useAutomatonStore((s) => s.automaton.alphabet);
+  const automaton = useAutomatonStore((s) => s.automaton);
+  const alphabet = automaton.alphabet;
   const setType = useAutomatonStore((s) => s.setType);
   const reenterSimulation = useSimulationStore((s) => s.enterSimulation);
 
@@ -231,6 +232,31 @@ export function SimulationPanel() {
                 <span className="sim-state-list">
                   {snapshot.activeStateIds.join(', ')}
                 </span>
+              </div>
+            )}
+
+            {/* PDA Stack visualization */}
+            {snapshot && snapshot.configurations && snapshot.configurations.length > 0 && (
+              <div className="sim-stack-section">
+                <span className="panel-label">Configurations ({snapshot.configurations.length}):</span>
+                <div className="sim-configs-list">
+                  {snapshot.configurations.slice(0, 10).map((config, i) => {
+                    const stateName = automaton.states.find((s) => s.id === config.stateId)?.name ?? '?';
+                    return (
+                      <div key={i} className="sim-config-item">
+                        <span className="sim-config-state">{stateName}</span>
+                        <span className="sim-config-stack" title={`Stack: [${config.stack.join(', ')}]`}>
+                          [{config.stack.join(', ')}]
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {snapshot.configurations.length > 10 && (
+                    <div className="sim-config-more">
+                      and {snapshot.configurations.length - 10} more...
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

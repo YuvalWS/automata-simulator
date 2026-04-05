@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import type { Automaton, AutomatonState, Transition } from '@/models/automaton';
+import type { Automaton, AutomatonState, Transition, PdaRule } from '@/models/automaton';
 import { createEmptyAutomaton } from '@/models/automaton';
 import type { Point, Viewport } from '@/models/geometry';
 import { AutomatonType } from '@/models/types';
+import type { PdaAcceptanceMode } from '@/models/types';
 import { generateId, generateStateName } from '@/utils/id';
 import { useHistoryStore } from './history-store';
 
@@ -20,6 +21,7 @@ interface AutomatonStore {
   setType: (type: AutomatonType) => void;
   setAlphabet: (alphabet: string[]) => void;
   setViewport: (viewport: Viewport) => void;
+  setAcceptanceMode: (mode: PdaAcceptanceMode) => void;
 
   // State actions
   addState: (position: Point) => AutomatonState;
@@ -30,9 +32,9 @@ interface AutomatonStore {
   toggleAccepting: (id: string) => void;
 
   // Transition actions
-  addTransition: (sourceId: string, targetId: string, symbols: string[]) => Transition;
+  addTransition: (sourceId: string, targetId: string, symbols: string[], pdaRules?: PdaRule[]) => Transition;
   removeTransition: (id: string) => void;
-  updateTransition: (id: string, updates: Partial<Pick<Transition, 'symbols' | 'controlPointOffset'>>) => void;
+  updateTransition: (id: string, updates: Partial<Pick<Transition, 'symbols' | 'pdaRules' | 'controlPointOffset'>>) => void;
 
   // History actions
   undo: () => void;
@@ -56,12 +58,34 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
 
   setType: (type) => {
     pushHistory(get().automaton);
-    set((s) => ({ automaton: { ...s.automaton, type } }));
+    set((s) => {
+      const prev = s.automaton;
+      const updates: Partial<Automaton> = { type };
+
+      if (type === AutomatonType.PDA && prev.type !== AutomatonType.PDA) {
+        // Switching to PDA: set default acceptance mode
+        updates.acceptanceMode = 'finalState';
+      } else if (type !== AutomatonType.PDA && prev.type === AutomatonType.PDA) {
+        // Switching away from PDA: clean up PDA fields
+        updates.acceptanceMode = undefined;
+        updates.transitions = prev.transitions.map((t) => {
+          const { pdaRules: _, ...rest } = t;
+          return rest;
+        });
+      }
+
+      return { automaton: { ...prev, ...updates } };
+    });
   },
 
   setAlphabet: (alphabet) => {
     pushHistory(get().automaton);
     set((s) => ({ automaton: { ...s.automaton, alphabet } }));
+  },
+
+  setAcceptanceMode: (mode) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, acceptanceMode: mode } }));
   },
 
   // Viewport changes are NOT undoable
@@ -152,12 +176,25 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
     }));
   },
 
-  addTransition: (sourceId, targetId, symbols) => {
+  addTransition: (sourceId, targetId, symbols, pdaRules) => {
     pushHistory(get().automaton);
     const existing = get().automaton.transitions.find(
       (t) => t.sourceId === sourceId && t.targetId === targetId,
     );
     if (existing) {
+      if (pdaRules) {
+        // PDA: append new rules to existing
+        const mergedRules = [...(existing.pdaRules ?? []), ...pdaRules];
+        set((s) => ({
+          automaton: {
+            ...s.automaton,
+            transitions: s.automaton.transitions.map((t) =>
+              t.id === existing.id ? { ...t, pdaRules: mergedRules } : t,
+            ),
+          },
+        }));
+        return { ...existing, pdaRules: mergedRules };
+      }
       const mergedSymbols = [...new Set([...existing.symbols, ...symbols])];
       set((s) => ({
         automaton: {
@@ -175,6 +212,7 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
       sourceId,
       targetId,
       symbols,
+      ...(pdaRules ? { pdaRules } : {}),
     };
     set((s) => ({
       automaton: {

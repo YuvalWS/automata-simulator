@@ -1,5 +1,6 @@
 import type { Point, Viewport } from './geometry';
 import { AutomatonType } from './types';
+import type { PdaAcceptanceMode } from './types';
 import { generateId } from '@/utils/id';
 
 export interface AutomatonState {
@@ -10,11 +11,18 @@ export interface AutomatonState {
   isAccepting: boolean;
 }
 
+export interface PdaRule {
+  inputSymbol: string;
+  stackPop: string;
+  stackPush: string[];
+}
+
 export interface Transition {
   id: string;
   sourceId: string;
   targetId: string;
   symbols: string[];
+  pdaRules?: PdaRule[];
   controlPointOffset?: Point;
 }
 
@@ -26,6 +34,7 @@ export interface Automaton {
   states: AutomatonState[];
   transitions: Transition[];
   viewport: Viewport;
+  acceptanceMode?: PdaAcceptanceMode;
 }
 
 export function createEmptyAutomaton(name = 'Untitled'): Automaton {

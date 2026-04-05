@@ -5,6 +5,7 @@
 - Demo pictures and videos for the README and website, showing off features and how to use the app.
 
 ## Done
+- ~~PDA (pushdown automata) support~~ — PDA type with stack operations, PDA transition rules (input/pop/push), final-state and empty-stack acceptance modes, stack visualization during simulation, nondeterministic configuration tracking
 - ~~Tab support for multiple automata~~ — tab bar UI, per-tab state isolation, per-tab file handles, multi-tab autosave, keyboard shortcuts (Ctrl+T/W/PgDn/PgUp)
 - ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
 - ~~AI Readme~~ — llms.txt and llms-full.txt with JSON schema docs, examples, and LLM instructions
@@ -13,7 +14,6 @@
 
 ## Other Ideas
 - Image export to clipboard (currently only to file) + make the export ignore selection highlights (but keep simulation trace highlights if in simulation mode)
-- PDA (pushdown automata) support
 - NFA to DFA conversion (subset construction)
 - Turing Machine simulation
 - Moore/Mealy machines

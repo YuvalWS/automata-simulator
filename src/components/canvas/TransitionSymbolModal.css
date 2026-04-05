@@ -99,3 +99,88 @@
 .symbol-modal-btn.epsilon:hover {
   background: var(--color-bg);
 }
+
+/* PDA-specific styles */
+.symbol-modal-pda {
+  min-width: 340px;
+}
+
+.pda-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.pda-rule-row {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--color-bg);
+}
+
+.pda-rule-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 6px;
+  align-items: end;
+}
+
+.pda-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pda-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pda-field-input-row {
+  display: flex;
+  gap: 3px;
+}
+
+.pda-input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.pda-eps-btn {
+  padding: 4px 6px !important;
+  font-size: 14px !important;
+  flex-shrink: 0;
+}
+
+.pda-remove-btn {
+  padding: 4px 8px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  align-self: center;
+}
+
+.pda-remove-btn:hover {
+  color: var(--color-error, #e53e3e);
+}
+
+.pda-add-rule {
+  width: 100%;
+  margin-top: 6px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  text-align: center;
+  font-weight: 500;
+}
+
+.pda-add-rule:hover {
+  background: var(--color-bg);
+}

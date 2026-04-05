@@ -2,7 +2,7 @@
 
 > **[Try it live at automata.yuweiss.dev](https://automata.yuweiss.dev/)**
 
-A web-based visual editor and simulator for finite automata (DFA and NFA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface. Works on desktop, tablet, and phone with full touch support.
+A web-based visual editor and simulator for finite automata (DFA, NFA, and PDA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface. Works on desktop, tablet, and phone with full touch support.
 
 <p align="center">
   <img src="docs/demo/hero-theme.gif" alt="Automata Simulator — light & dark mode" width="720" />
@@ -27,12 +27,13 @@ Test multiple words at once and instantly see which are accepted or rejected.
 ## Features
 
 - **Interactive diagram editor** — drag states to reposition, scroll to zoom, drag canvas to pan
-- **Word simulation** — step-by-step DFA/NFA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
+- **Word simulation** — step-by-step DFA/NFA/PDA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
 - **Batch simulation** — test multiple words at once, see accept/reject results for each
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state; suggests switching to NFA when conflicts are found
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
-- **DFA & NFA support** — toggle between deterministic and nondeterministic modes
+- **DFA, NFA & PDA support** — toggle between deterministic, nondeterministic, and pushdown automata modes
 - **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
+- **PDA stack operations** — define transitions with input symbol, stack pop, and stack push; supports final-state and empty-stack acceptance modes with real-time stack visualization during simulation
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
 - **Smart self-loop placement** — self-loops automatically position away from connected edges and the initial arrow
 - **Smart edge routing** — fan-out edges from the same state are offset to avoid overlap
@@ -180,7 +181,7 @@ src/
 ├── services/
 │   ├── serialization/  # JSON save & load with Zod validation
 │   ├── layout/         # Edge routing, Bezier curves, label overlap avoidance, self-loop placement
-│   ├── simulation/     # DFA/NFA trace engine, pre-simulation validator
+│   ├── simulation/     # DFA/NFA/PDA trace engine, pre-simulation validator
 │   └── export/         # PNG image export
 ├── hooks/         # Keyboard shortcuts, touch canvas, auto-save, unsaved warning, theme, viewport detection
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport

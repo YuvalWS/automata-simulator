@@ -48,6 +48,7 @@ export function circleIntersection(from: Point, _to: Point, center: Point, radiu
   return pointOnCircle(center, radius, a);
 }
 
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { buildSimulationTrace } from '@/services/simulation/simulator';
 import type { SimulationSnapshot } from '@/services/simulation/simulator';
-import type { Automaton } from '@/models/automaton';
+import type { Automaton, PdaRule } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
+import { EPSILON, STACK_BOTTOM } from '@/models/epsilon';
 
 /** Get last element of array (replacement for .at(-1) which needs ES2022) */
 function last(arr: SimulationSnapshot[]): SimulationSnapshot {
@@ -970,5 +971,164 @@ describe('trace edge cases', () => {
     expect(trace.snapshots).toHaveLength(1);
     expect(trace.snapshots[0]!.status).toBe('rejected');
     expect(trace.snapshots[0]!.activeStateIds).toEqual([]);
+  });
+});
+
+// ── PDA simulation tests ──
+
+function makePdaRule(input: string, pop: string, push: string[]): PdaRule {
+  return { inputSymbol: input, stackPop: pop, stackPush: push };
+}
+
+describe('PDA: a^n b^n (classic)', () => {
+  // PDA for { a^n b^n | n >= 1 }
+  // q0: push A for each 'a', then epsilon to q1
+  // q1: pop A for each 'b'
+  // q2: accepting (final state) — reached when stack has only Z₀
+  const anbn = makeAutomaton({
+    type: AutomatonType.PDA,
+    alphabet: ['a', 'b'],
+    acceptanceMode: 'finalState',
+    states: [
+      { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+      { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+    ],
+    transitions: [
+      // Read 'a', push A onto stack (regardless of stack top for first push, or A on top for subsequent)
+      { id: 't1', sourceId: 'q0', targetId: 'q0', symbols: [], pdaRules: [makePdaRule('a', STACK_BOTTOM, ['A', STACK_BOTTOM])] },
+      { id: 't2', sourceId: 'q0', targetId: 'q0', symbols: [], pdaRules: [makePdaRule('a', 'A', ['A', 'A'])] },
+      // Epsilon transition to switch to popping phase
+      { id: 't3', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [makePdaRule(EPSILON, 'A', ['A'])] },
+      // Read 'b', pop A
+      { id: 't4', sourceId: 'q1', targetId: 'q1', symbols: [], pdaRules: [makePdaRule('b', 'A', [])] },
+      // When stack bottom reached, go to accepting state
+      { id: 't5', sourceId: 'q1', targetId: 'q2', symbols: [], pdaRules: [makePdaRule(EPSILON, STACK_BOTTOM, [STACK_BOTTOM])] },
+    ],
+  });
+
+  it('accepts "ab"', () => {
+    expect(lastStatus(anbn, ['a', 'b'])).toBe('accepted');
+  });
+
+  it('accepts "aabb"', () => {
+    expect(lastStatus(anbn, ['a', 'a', 'b', 'b'])).toBe('accepted');
+  });
+
+  it('accepts "aaabbb"', () => {
+    expect(lastStatus(anbn, ['a', 'a', 'a', 'b', 'b', 'b'])).toBe('accepted');
+  });
+
+  it('rejects "aab" (unbalanced)', () => {
+    expect(lastStatus(anbn, ['a', 'a', 'b'])).toBe('rejected');
+  });
+
+  it('rejects "abb" (too many b)', () => {
+    expect(lastStatus(anbn, ['a', 'b', 'b'])).toBe('rejected');
+  });
+
+  it('rejects "ba" (wrong order)', () => {
+    expect(lastStatus(anbn, ['b', 'a'])).toBe('rejected');
+  });
+
+  it('rejects empty word', () => {
+    expect(lastStatus(anbn, [])).toBe('rejected');
+  });
+
+  it('includes configurations in snapshots', () => {
+    const trace = buildSimulationTrace(anbn, ['a', 'b']);
+    expect(trace.snapshots[0]!.configurations).toBeDefined();
+    expect(trace.snapshots[0]!.configurations!.length).toBeGreaterThan(0);
+    // Initial config should have stack with Z₀
+    expect(trace.snapshots[0]!.configurations![0]!.stack).toContain(STACK_BOTTOM);
+  });
+});
+
+describe('PDA: empty stack acceptance', () => {
+  // Simple PDA that accepts by empty stack: read 'a', pop Z₀
+  const emptyStackPda = makeAutomaton({
+    type: AutomatonType.PDA,
+    alphabet: ['a'],
+    acceptanceMode: 'emptyStack',
+    states: [
+      { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+    ],
+    transitions: [
+      { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [makePdaRule('a', STACK_BOTTOM, [])] },
+    ],
+  });
+
+  it('accepts "a" (stack becomes empty)', () => {
+    expect(lastStatus(emptyStackPda, ['a'])).toBe('accepted');
+  });
+
+  it('rejects empty word (stack still has Z₀)', () => {
+    expect(lastStatus(emptyStackPda, [])).toBe('rejected');
+  });
+
+  it('rejects "aa" (no transition from q1)', () => {
+    expect(lastStatus(emptyStackPda, ['a', 'a'])).toBe('rejected');
+  });
+});
+
+describe('PDA: epsilon transitions', () => {
+  // PDA with epsilon input transitions
+  const epsPda = makeAutomaton({
+    type: AutomatonType.PDA,
+    alphabet: ['a'],
+    acceptanceMode: 'finalState',
+    states: [
+      { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+    ],
+    transitions: [
+      // Epsilon transition: don't consume input, don't change stack, go to accepting
+      { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [makePdaRule(EPSILON, EPSILON, [])] },
+    ],
+  });
+
+  it('accepts empty word via epsilon transition', () => {
+    expect(lastStatus(epsPda, [])).toBe('accepted');
+  });
+});
+
+describe('PDA: no initial state', () => {
+  it('rejects when no initial state exists', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      states: [],
+    });
+    const trace = buildSimulationTrace(pda, ['a']);
+    expect(trace.snapshots).toHaveLength(1);
+    expect(trace.snapshots[0]!.status).toBe('rejected');
+  });
+});
+
+describe('PDA: nondeterministic branching', () => {
+  // PDA with two rules on same input — creates branching configurations
+  const ndPda = makeAutomaton({
+    type: AutomatonType.PDA,
+    alphabet: ['a'],
+    acceptanceMode: 'finalState',
+    states: [
+      { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      { id: 'q2', name: 'q2', position: { x: 100, y: 100 }, isInitial: false, isAccepting: false },
+    ],
+    transitions: [
+      { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [makePdaRule('a', STACK_BOTTOM, [STACK_BOTTOM])] },
+      { id: 't2', sourceId: 'q0', targetId: 'q2', symbols: [], pdaRules: [makePdaRule('a', STACK_BOTTOM, [STACK_BOTTOM])] },
+    ],
+  });
+
+  it('accepts when any branch reaches accepting state', () => {
+    expect(lastStatus(ndPda, ['a'])).toBe('accepted');
+  });
+
+  it('has multiple configurations after branching', () => {
+    const trace = buildSimulationTrace(ndPda, ['a']);
+    const lastSnap = last(trace.snapshots);
+    expect(lastSnap.configurations!.length).toBe(2);
   });
 });

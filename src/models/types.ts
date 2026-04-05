@@ -1,7 +1,10 @@
 export enum AutomatonType {
   DFA = 'DFA',
   NFA = 'NFA',
+  PDA = 'PDA',
 }
+
+export type PdaAcceptanceMode = 'finalState' | 'emptyStack';
 
 export enum EditorTool {
   Pointer = 'pointer',
