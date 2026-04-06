@@ -77,7 +77,7 @@ describe('JSON serializer', () => {
     const json = serializeToJson(original);
     const parsed = JSON.parse(json);
 
-    expect(parsed.version).toBe('1.1.0');
+    expect(parsed.version).toBe('1.2.0');
   });
 
   it('rejects invalid JSON', () => {
@@ -157,6 +157,50 @@ describe('JSON serializer', () => {
     expect(restored.type).toBe('PDA');
     expect(restored.acceptanceMode).toBe('finalState');
     expect(restored.transitions[0]!.pdaRules).toEqual(pda.transitions[0]!.pdaRules);
+  });
+
+  it('round-trips a PDA with peek mode and peekAction rules', () => {
+    const pda: Automaton = {
+      id: 'pda-peek',
+      name: 'Peek PDA',
+      type: AutomatonType.PDA,
+      alphabet: ['a'],
+      acceptanceMode: 'finalState',
+      pdaStackMode: 'peek',
+      states: [
+        { id: 's1', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 's2', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        {
+          id: 't1', sourceId: 's1', targetId: 's2', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: 'Z\u2080', stackPush: [], peekAction: 'nop' }],
+        },
+      ],
+      viewport: { panX: 0, panY: 0, zoom: 1 },
+    };
+    const json = serializeToJson(pda);
+    const restored = deserializeFromJson(json);
+    expect(restored.pdaStackMode).toBe('peek');
+    expect(restored.transitions[0]!.pdaRules![0]!.peekAction).toBe('nop');
+  });
+
+  it('loads old v1.1.0 PDA files (backward compat — no pdaStackMode)', () => {
+    const oldJson = JSON.stringify({
+      version: '1.1.0',
+      automaton: {
+        id: 'old', name: 'Old PDA', type: 'PDA',
+        alphabet: ['a'],
+        acceptanceMode: 'finalState',
+        states: [{ id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: true }],
+        transitions: [{ id: 't1', sourceId: 'q0', targetId: 'q0', symbols: [], pdaRules: [{ inputSymbol: 'a', stackPop: 'Z\u2080', stackPush: [] }] }],
+        viewport: { panX: 0, panY: 0, zoom: 1 },
+      },
+    });
+    const restored = deserializeFromJson(oldJson);
+    expect(restored.type).toBe('PDA');
+    expect(restored.pdaStackMode).toBeUndefined(); // not set — simulator defaults to 'pop'
+    expect(restored.transitions[0]!.pdaRules![0]!.peekAction).toBeUndefined();
   });
 
   it('loads old v1.0.0 DFA files (backward compat)', () => {

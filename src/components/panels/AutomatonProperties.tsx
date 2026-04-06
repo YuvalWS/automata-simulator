@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
-import type { PdaAcceptanceMode } from '@/models/types';
+import type { PdaAcceptanceMode, PdaStackMode } from '@/models/types';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
@@ -9,6 +9,7 @@ export function AutomatonProperties() {
   const setType = useAutomatonStore((s) => s.setType);
   const setAlphabet = useAutomatonStore((s) => s.setAlphabet);
   const setAcceptanceMode = useAutomatonStore((s) => s.setAcceptanceMode);
+  const setPdaStackMode = useAutomatonStore((s) => s.setPdaStackMode);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
 
@@ -76,6 +77,21 @@ export function AutomatonProperties() {
           >
             <option value="finalState">Final State</option>
             <option value="emptyStack">Empty Stack</option>
+          </select>
+        </label>
+      )}
+
+      {automaton.type === AutomatonType.PDA && (
+        <label className="panel-field">
+          <span className="panel-label">Stack Mode</span>
+          <select
+            className="panel-select"
+            value={automaton.pdaStackMode ?? 'pop'}
+            onChange={(e) => setPdaStackMode(e.target.value as PdaStackMode)}
+            data-testid="pda-stack-mode-select"
+          >
+            <option value="pop">Pop</option>
+            <option value="peek">Peek</option>
           </select>
         </label>
       )}

@@ -3,7 +3,7 @@ import type { Automaton, AutomatonState, Transition, PdaRule } from '@/models/au
 import { createEmptyAutomaton } from '@/models/automaton';
 import type { Point, Viewport } from '@/models/geometry';
 import { AutomatonType } from '@/models/types';
-import type { PdaAcceptanceMode } from '@/models/types';
+import type { PdaAcceptanceMode, PdaStackMode } from '@/models/types';
 import { generateId, generateStateName } from '@/utils/id';
 import { useHistoryStore } from './history-store';
 
@@ -22,6 +22,7 @@ interface AutomatonStore {
   setAlphabet: (alphabet: string[]) => void;
   setViewport: (viewport: Viewport) => void;
   setAcceptanceMode: (mode: PdaAcceptanceMode) => void;
+  setPdaStackMode: (mode: PdaStackMode) => void;
 
   // State actions
   addState: (position: Point) => AutomatonState;
@@ -63,11 +64,13 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
       const updates: Partial<Automaton> = { type };
 
       if (type === AutomatonType.PDA && prev.type !== AutomatonType.PDA) {
-        // Switching to PDA: set default acceptance mode
+        // Switching to PDA: set default acceptance mode and stack mode
         updates.acceptanceMode = 'finalState';
+        updates.pdaStackMode = 'pop';
       } else if (type !== AutomatonType.PDA && prev.type === AutomatonType.PDA) {
         // Switching away from PDA: clean up PDA fields
         updates.acceptanceMode = undefined;
+        updates.pdaStackMode = undefined;
         updates.transitions = prev.transitions.map((t) => {
           const { pdaRules: _, ...rest } = t;
           return rest;
@@ -86,6 +89,11 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
   setAcceptanceMode: (mode) => {
     pushHistory(get().automaton);
     set((s) => ({ automaton: { ...s.automaton, acceptanceMode: mode } }));
+  },
+
+  setPdaStackMode: (mode) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, pdaStackMode: mode } }));
   },
 
   // Viewport changes are NOT undoable

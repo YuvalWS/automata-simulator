@@ -960,6 +960,7 @@ export function AutomataCanvas() {
           initialSymbols={symbolModal.existingSymbols}
           initialPdaRules={symbolModal.existingPdaRules}
           automatonType={automaton.type}
+          pdaStackMode={automaton.pdaStackMode}
           onSubmit={handleSymbolModalSubmit}
           onCancel={handleSymbolModalCancel}
         />

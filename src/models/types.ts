@@ -6,6 +6,8 @@ export enum AutomatonType {
 
 export type PdaAcceptanceMode = 'finalState' | 'emptyStack';
 
+export type PdaStackMode = 'pop' | 'peek';
+
 export enum EditorTool {
   Pointer = 'pointer',
 }
