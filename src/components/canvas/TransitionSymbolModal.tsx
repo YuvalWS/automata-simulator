@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { EPSILON } from '@/models/epsilon';
+import { EPSILON, normalizeEpsilon } from '@/models/epsilon';
 import { AutomatonType } from '@/models/types';
 import type { PdaStackMode } from '@/models/types';
 import { useViewport } from '@/hooks/use-viewport';
@@ -82,8 +82,8 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
     if (validRules.length > 0) {
       const normalized = validRules.map((r) => {
         const base = {
-          inputSymbol: r.inputSymbol || EPSILON,
-          stackPop: r.stackPop || EPSILON,
+          inputSymbol: normalizeEpsilon(r.inputSymbol),
+          stackPop: normalizeEpsilon(r.stackPop),
           stackPush: r.stackPush,
         };
         if (isPeek) {

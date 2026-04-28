@@ -145,10 +145,18 @@ export function AutomataCanvas() {
           setSelectionBox({ start: point, end: point });
           mouseDownPos.current = { x: e.clientX, y: e.clientY };
         } else {
+          // If the user was focused on a sidebar input or had a canvas element selected,
+          // this click is intended to clear that focus/selection — don't also create a state.
+          const hadInputFocus =
+            document.activeElement instanceof HTMLInputElement ||
+            document.activeElement instanceof HTMLTextAreaElement ||
+            document.activeElement instanceof HTMLSelectElement;
+          const hadSelection = useEditorStore.getState().selection.length > 0;
           clearSelection();
           setPendingTransitionSource(null);
           setIsPanning(true);
-          mouseDownPos.current = { x: e.clientX, y: e.clientY };
+          mouseDownPos.current =
+            hadInputFocus || hadSelection ? null : { x: e.clientX, y: e.clientY };
           panStart.current = { x: e.clientX, y: e.clientY, panX, panY };
         }
       }
