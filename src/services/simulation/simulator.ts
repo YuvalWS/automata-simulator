@@ -326,7 +326,7 @@ function buildPdaTrace(automaton: Automaton, word: string[]): SimulationTrace {
   const stackMode = automaton.pdaStackMode ?? 'pop';
 
   // Initialize with single configuration: initial state, stack = [STACK_BOTTOM]
-  let initConfigs: PdaConfiguration[] = [{ stateId: initialState.id, stack: [STACK_BOTTOM] }];
+  const initConfigs: PdaConfiguration[] = [{ stateId: initialState.id, stack: [STACK_BOTTOM] }];
 
   // Apply epsilon closure
   const initClosure = pdaEpsilonClosure(automaton, initConfigs, stackMode);

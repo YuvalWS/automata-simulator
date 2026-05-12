@@ -27,7 +27,7 @@ export function useKeyboardShortcuts() {
       // Undo/redo work even when a sidebar input is focused
       if (ctrl && !simState.isActive) {
         const key = e.key.toLowerCase();
-        if (key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+        if (key === 'z') { e.preventDefault(); if (e.shiftKey) { redo(); } else { undo(); } return; }
         if (key === 'y') { e.preventDefault(); redo(); return; }
       }
 

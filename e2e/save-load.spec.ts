@@ -1,15 +1,11 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import { CanvasHelper } from './helpers/canvas-helpers';
 import { AutomatonBuilder } from './helpers/automaton-builder';
 import { SEL } from './helpers/selectors';
 
 test.describe('Save and Load', () => {
-  let canvas: CanvasHelper;
   let builder: AutomatonBuilder;
 
   test.beforeEach(async ({ page }) => {
-    canvas = new CanvasHelper(page);
     builder = new AutomatonBuilder(page);
     await page.goto('/');
     await page.waitForSelector(SEL.canvas);

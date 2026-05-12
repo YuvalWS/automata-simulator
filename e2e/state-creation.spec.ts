@@ -14,7 +14,7 @@ test.describe('State Creation', () => {
     await page.waitForSelector(SEL.canvas);
   });
 
-  test('app starts with one initial state (q0)', async ({ page }) => {
+  test('app starts with one initial state (q0)', async () => {
     const count = await canvas.stateCount();
     expect(count).toBe(1);
 
@@ -34,7 +34,7 @@ test.describe('State Creation', () => {
     expect(automaton.states).toHaveLength(2);
   });
 
-  test('first state is initial, subsequent states are not', async ({ page }) => {
+  test('first state is initial, subsequent states are not', async () => {
     await canvas.clickCanvas(500, 150);
     await canvas.clickCanvas(500, 350);
 
@@ -46,7 +46,7 @@ test.describe('State Creation', () => {
     expect(initialStates[0].name).toBe('q0');
   });
 
-  test('states get sequential names q0, q1, q2', async ({ page }) => {
+  test('states get sequential names q0, q1, q2', async () => {
     await canvas.clickCanvas(400, 100);
     await canvas.clickCanvas(600, 100);
 
