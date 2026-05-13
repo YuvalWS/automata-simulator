@@ -305,4 +305,118 @@ describe('PDA validation', () => {
     const msgs = validateAutomaton(pda);
     expect(msgs.some((m) => m.type === 'warning' && m.message.includes('empty-stack'))).toBe(true);
   });
+
+  // ---------- TM validation ----------
+
+  it('TM: errors on DTM duplicate rule for same (state, readSymbol)', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'b', direction: 'L' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    const conflict = msgs.find((m) => m.type === 'error' && m.message.includes('DTM conflict'));
+    expect(conflict).toBeDefined();
+    expect(conflict!.action?.key).toBe('switch-ntm');
+  });
+
+  it('TM: no duplicate-rule error in nondeterministic mode', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'nondeterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'b', direction: 'L' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.filter((m) => m.type === 'error' && m.message.includes('DTM conflict'))).toHaveLength(0);
+  });
+
+  it('TM: warns when transitions exist but no tmRules anywhere', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('TM rules'))).toBe(true);
+  });
+
+  it('TM: warns when haltOnAccept and accepting states are present', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'haltOnAccept',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('halt-on-accept'))).toBe(true);
+  });
+
+  it('TM: errors when no initial state', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'error' && m.message.toLowerCase().includes('initial'))).toBe(true);
+  });
+
+  it('TM: DTM conflict when two rules overlap on even one read symbol', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['0', '1'], direction: 'R' },
+        ] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['1', '2'], direction: 'L' },
+        ] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    const conflict = msgs.find((m) => m.type === 'error' && m.message.includes('DTM conflict'));
+    expect(conflict).toBeDefined();
+    expect(conflict!.message).toMatch(/read symbol "1"/);
+  });
+
+  it('TM: a single multi-read rule does not conflict with itself', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '_',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['0', '1', '2'], direction: 'R' },
+        ] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.filter((m) => m.type === 'error' && m.message.includes('DTM conflict'))).toHaveLength(0);
+  });
 });

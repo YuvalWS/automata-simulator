@@ -2,7 +2,7 @@
 
 > **[Try it live at automata.yuweiss.dev](https://automata.yuweiss.dev/)**
 
-A web-based visual editor and simulator for finite automata (DFA, NFA, and PDA). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface. Works on desktop, tablet, and phone with full touch support.
+A web-based visual editor and simulator for finite automata (DFA, NFA, PDA) and Turing Machines (TM). Build automata with an interactive diagram editor, simulate words step-by-step, save/load your work, and edit states and transitions with a professional interface. Works on desktop, tablet, and phone with full touch support.
 
 <p align="center">
   <img src="docs/demo/hero-theme.gif" alt="Automata Simulator — light & dark mode" width="720" />
@@ -27,14 +27,15 @@ Test multiple words at once and instantly see which are accepted or rejected.
 ## Features
 
 - **Interactive diagram editor** — drag states to reposition, scroll to zoom, drag canvas to pan
-- **Word simulation** — step-by-step DFA/NFA/PDA simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
+- **Word simulation** — step-by-step DFA/NFA/PDA/TM simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
 - **Batch simulation** — test multiple words at once, see accept/reject results for each
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state; suggests switching to NFA when conflicts are found
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
-- **DFA, NFA & PDA support** — toggle between deterministic, nondeterministic, and pushdown automata modes
+- **DFA, NFA, PDA & TM support** — toggle between deterministic, nondeterministic, pushdown, and Turing machine modes
 - **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
 - **PDA stack operations** — define transitions with input symbol, stack pop/peek, and stack push; supports final-state and empty-stack acceptance modes with real-time stack visualization during simulation
 - **PDA stack mode** — choose between **Pop** (standard: stack top consumed on each transition) and **Peek** (stack top inspected without consuming; each rule picks one action: no-op, push, or pop)
+- **Turing Machines (DTM / NTM)** — define rules as `read → write, move (L/S/R)` with a configurable blank symbol; both deterministic and nondeterministic variants supported; **final-state** and **halt-on-accept** acceptance modes; live tape visualization with head marker; 1000-step cap with explicit `timeout` status for non-halting machines. Rules can combine multiple read symbols (label: `0,1,Y,Z → L`) and omit the write for a no-op move (label: `Y → R`).
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
 - **Smart self-loop placement** — self-loops automatically position away from connected edges and the initial arrow
 - **Smart edge routing** — fan-out edges from the same state are offset to avoid overlap

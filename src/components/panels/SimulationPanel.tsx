@@ -34,16 +34,24 @@ export function SimulationPanel() {
   const automaton = useAutomatonStore((s) => s.automaton);
   const alphabet = automaton.alphabet;
   const setType = useAutomatonStore((s) => s.setType);
+  const setTmMode = useAutomatonStore((s) => s.setTmMode);
   const reenterSimulation = useSimulationStore((s) => s.enterSimulation);
+  const isTM = automaton.type === AutomatonType.TM;
+  const blank = automaton.tmBlankSymbol && automaton.tmBlankSymbol.length > 0
+    ? automaton.tmBlankSymbol
+    : '_';
 
   const handleAction = useCallback(
     (key: string) => {
       if (key === 'switch-nfa') {
         setType(AutomatonType.NFA);
         reenterSimulation();
+      } else if (key === 'switch-ntm') {
+        setTmMode('nondeterministic');
+        reenterSimulation();
       }
     },
-    [setType, reenterSimulation],
+    [setType, setTmMode, reenterSimulation],
   );
   const snapshot = getCurrentSnapshot(useSimulationStore.getState());
   const hasErrors = validationMessages.some((m) => m.type === 'error');
@@ -196,16 +204,17 @@ export function SimulationPanel() {
           <div className="panel-section">
             <h3 className="panel-title">Step {currentStep} / {trace.snapshots.length - 1}</h3>
 
-            {/* Word display with highlighted current symbol */}
+            {/* Word display with highlighted current symbol (DFA/NFA/PDA only — TM
+                doesn't consume the word symbol-by-symbol). */}
             {word.length > 0 && (
               <div className="sim-word-display">
                 {word.map((sym, i) => (
                   <span
                     key={i}
                     className={`sim-symbol ${
-                      snapshot && i === snapshot.symbolIndex
+                      !isTM && snapshot && i === snapshot.symbolIndex
                         ? 'sim-symbol-current'
-                        : snapshot && i < snapshot.symbolIndex
+                        : !isTM && snapshot && i < snapshot.symbolIndex
                           ? 'sim-symbol-consumed'
                           : ''
                     }`}
@@ -222,6 +231,7 @@ export function SimulationPanel() {
                 {snapshot.status === 'running' && 'Running...'}
                 {snapshot.status === 'accepted' && 'Accepted'}
                 {snapshot.status === 'rejected' && 'Rejected'}
+                {snapshot.status === 'timeout' && 'Timeout (step cap reached)'}
               </div>
             )}
 
@@ -254,6 +264,44 @@ export function SimulationPanel() {
                   {snapshot.configurations.length > 10 && (
                     <div className="sim-config-more">
                       and {snapshot.configurations.length - 10} more...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TM Tape visualization */}
+            {snapshot && snapshot.tmConfigurations && snapshot.tmConfigurations.length > 0 && (
+              <div className="sim-tm-section" data-testid="sim-tm-section">
+                <span className="panel-label">Configurations ({snapshot.tmConfigurations.length}):</span>
+                <div className="sim-configs-list">
+                  {snapshot.tmConfigurations.slice(0, 10).map((cfg, i) => {
+                    const stateName = automaton.states.find((s) => s.id === cfg.stateId)?.name ?? '?';
+                    const WINDOW = 15;
+                    const half = Math.floor(WINDOW / 2);
+                    const cells: { sym: string; isHead: boolean }[] = [];
+                    for (let off = -half; off <= half; off++) {
+                      const idx = cfg.headIndex + off;
+                      const sym = idx >= 0 && idx < cfg.tape.length ? cfg.tape[idx]! : blank;
+                      cells.push({ sym, isHead: off === 0 });
+                    }
+                    return (
+                      <div key={i} className="sim-tm-config">
+                        <span className="sim-config-state">{stateName}</span>
+                        <div className="sim-tm-tape" data-testid={i === 0 ? 'sim-tm-tape' : undefined}>
+                          {cells.map((c, j) => (
+                            <span
+                              key={j}
+                              className={`sim-tm-cell ${c.isHead ? 'sim-tm-cell-head' : ''}`}
+                            >{c.sym}</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {snapshot.tmConfigurations.length > 10 && (
+                    <div className="sim-config-more">
+                      and {snapshot.tmConfigurations.length - 10} more...
                     </div>
                   )}
                 </div>

@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { Automaton, AutomatonState, Transition, PdaRule } from '@/models/automaton';
+import type { Automaton, AutomatonState, Transition, PdaRule, TmRule } from '@/models/automaton';
 import { createEmptyAutomaton } from '@/models/automaton';
 import type { Point, Viewport } from '@/models/geometry';
 import { AutomatonType } from '@/models/types';
-import type { PdaAcceptanceMode, PdaStackMode } from '@/models/types';
+import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
+import { DEFAULT_BLANK_SYMBOL } from '@/models/epsilon';
 import { generateId, generateStateName } from '@/utils/id';
 import { useHistoryStore } from './history-store';
 
@@ -21,8 +22,10 @@ interface AutomatonStore {
   setType: (type: AutomatonType) => void;
   setAlphabet: (alphabet: string[]) => void;
   setViewport: (viewport: Viewport) => void;
-  setAcceptanceMode: (mode: PdaAcceptanceMode) => void;
+  setAcceptanceMode: (mode: AcceptanceMode) => void;
   setPdaStackMode: (mode: PdaStackMode) => void;
+  setTmMode: (mode: TmMode) => void;
+  setTmBlankSymbol: (sym: string) => void;
 
   // State actions
   addState: (position: Point) => AutomatonState;
@@ -33,9 +36,9 @@ interface AutomatonStore {
   toggleAccepting: (id: string) => void;
 
   // Transition actions
-  addTransition: (sourceId: string, targetId: string, symbols: string[], pdaRules?: PdaRule[]) => Transition;
+  addTransition: (sourceId: string, targetId: string, symbols: string[], pdaRules?: PdaRule[], tmRules?: TmRule[]) => Transition;
   removeTransition: (id: string) => void;
-  updateTransition: (id: string, updates: Partial<Pick<Transition, 'symbols' | 'pdaRules' | 'controlPointOffset'>>) => void;
+  updateTransition: (id: string, updates: Partial<Pick<Transition, 'symbols' | 'pdaRules' | 'tmRules' | 'controlPointOffset'>>) => void;
 
   // History actions
   undo: () => void;
@@ -77,6 +80,24 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
         });
       }
 
+      if (type === AutomatonType.TM && prev.type !== AutomatonType.TM) {
+        // Switching to TM: set default acceptance mode, TM mode, and blank symbol
+        updates.acceptanceMode = 'finalState';
+        updates.tmMode = 'deterministic';
+        updates.tmBlankSymbol = DEFAULT_BLANK_SYMBOL;
+      } else if (type !== AutomatonType.TM && prev.type === AutomatonType.TM) {
+        // Switching away from TM: clean up TM fields
+        updates.tmMode = undefined;
+        updates.tmBlankSymbol = undefined;
+        // haltOnAccept is TM-only; reset to undefined when leaving TM
+        if (prev.acceptanceMode === 'haltOnAccept') updates.acceptanceMode = undefined;
+        const baseTransitions = updates.transitions ?? prev.transitions;
+        updates.transitions = baseTransitions.map((t) => {
+          const { tmRules: _, ...rest } = t;
+          return rest;
+        });
+      }
+
       return { automaton: { ...prev, ...updates } };
     });
   },
@@ -94,6 +115,17 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
   setPdaStackMode: (mode) => {
     pushHistory(get().automaton);
     set((s) => ({ automaton: { ...s.automaton, pdaStackMode: mode } }));
+  },
+
+  setTmMode: (mode) => {
+    pushHistory(get().automaton);
+    set((s) => ({ automaton: { ...s.automaton, tmMode: mode } }));
+  },
+
+  setTmBlankSymbol: (sym) => {
+    pushHistory(get().automaton);
+    const blank = sym && sym.length > 0 ? sym : DEFAULT_BLANK_SYMBOL;
+    set((s) => ({ automaton: { ...s.automaton, tmBlankSymbol: blank } }));
   },
 
   // Viewport changes are NOT undoable
@@ -184,7 +216,7 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
     }));
   },
 
-  addTransition: (sourceId, targetId, symbols, pdaRules) => {
+  addTransition: (sourceId, targetId, symbols, pdaRules, tmRules) => {
     pushHistory(get().automaton);
     const existing = get().automaton.transitions.find(
       (t) => t.sourceId === sourceId && t.targetId === targetId,
@@ -202,6 +234,19 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
           },
         }));
         return { ...existing, pdaRules: mergedRules };
+      }
+      if (tmRules) {
+        // TM: append new rules to existing
+        const mergedRules = [...(existing.tmRules ?? []), ...tmRules];
+        set((s) => ({
+          automaton: {
+            ...s.automaton,
+            transitions: s.automaton.transitions.map((t) =>
+              t.id === existing.id ? { ...t, tmRules: mergedRules } : t,
+            ),
+          },
+        }));
+        return { ...existing, tmRules: mergedRules };
       }
       const mergedSymbols = [...new Set([...existing.symbols, ...symbols])];
       set((s) => ({
@@ -221,6 +266,7 @@ export const useAutomatonStore = create<AutomatonStore>((set, get) => ({
       targetId,
       symbols,
       ...(pdaRules ? { pdaRules } : {}),
+      ...(tmRules ? { tmRules } : {}),
     };
     set((s) => ({
       automaton: {

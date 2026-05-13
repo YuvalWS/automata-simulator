@@ -192,6 +192,75 @@
   border: 1px solid var(--color-sim-status-rejected-border);
 }
 
+.sim-status-timeout {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sim-status-timeout {
+    background: #3b1e08;
+    color: #fdba74;
+    border-color: #9a3412;
+  }
+}
+
+/* TM tape visualization */
+.sim-tm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.sim-tm-config {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  overflow-x: auto;
+}
+
+.sim-tm-tape {
+  display: flex;
+  gap: 1px;
+}
+
+.sim-tm-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.sim-tm-cell-head {
+  border-color: var(--color-accent);
+  background: var(--color-sim-status-running-bg, #dbeafe);
+  color: var(--color-accent);
+  font-weight: 700;
+  position: relative;
+}
+
+.sim-tm-cell-head::after {
+  content: '▼';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: var(--color-accent);
+}
+
 /* Active states display */
 .sim-active-states {
   display: flex;

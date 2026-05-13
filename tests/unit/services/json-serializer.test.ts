@@ -79,7 +79,7 @@ describe('JSON serializer', () => {
     const json = serializeToJson(original);
     const parsed = JSON.parse(json);
 
-    expect(parsed.version).toBe('1.2.0');
+    expect(parsed.version).toBe('1.4.0');
   });
 
   it('rejects invalid JSON', () => {
@@ -269,5 +269,99 @@ describe('JSON serializer', () => {
     expect(restored.type).toBe('DFA');
     expect(restored.transitions[0]!.symbols).toEqual(['a']);
     expect(restored.transitions[0]!.pdaRules).toBeUndefined();
+  });
+
+  describe('TM serialization', () => {
+    it('round-trips a TM with rules and TM-specific fields', () => {
+      const tm: Automaton = {
+        id: 'tm1',
+        name: 'Test TM',
+        type: AutomatonType.TM,
+        alphabet: ['0', '1'],
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [
+            { readSymbols: ['0', '1'], writeSymbol: 'X', direction: 'R' },
+            { readSymbols: ['Y'], direction: 'L' },  // no-op write
+          ] },
+        ],
+        viewport: { panX: 0, panY: 0, zoom: 1 },
+        tmMode: 'nondeterministic',
+        tmBlankSymbol: '_',
+        acceptanceMode: 'haltOnAccept',
+      };
+      const json = serializeToJson(tm);
+      const restored = deserializeFromJson(json);
+      expect(restored.type).toBe('TM');
+      expect(restored.tmMode).toBe('nondeterministic');
+      expect(restored.tmBlankSymbol).toBe('_');
+      expect(restored.acceptanceMode).toBe('haltOnAccept');
+      expect(restored.transitions[0]!.tmRules).toEqual([
+        { readSymbols: ['0', '1'], writeSymbol: 'X', direction: 'R' },
+        { readSymbols: ['Y'], direction: 'L' },
+      ]);
+    });
+
+    it('serializes with version 1.4.0', () => {
+      const tm: Automaton = {
+        id: 'tm1', name: 'Test', type: AutomatonType.TM, alphabet: [],
+        states: [{ id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false }],
+        transitions: [],
+        viewport: { panX: 0, panY: 0, zoom: 1 },
+      };
+      const parsed = JSON.parse(serializeToJson(tm));
+      expect(parsed.version).toBe('1.4.0');
+    });
+
+    it('migrates v1 TM rules ({ readSymbol }) to v2 ({ readSymbols: [...] }) on load', () => {
+      const oldTmJson = JSON.stringify({
+        version: '1.3.0',
+        automaton: {
+          id: 'tm-old', name: 'Old TM', type: 'TM',
+          alphabet: ['0'],
+          states: [
+            { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+            { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+          ],
+          transitions: [
+            { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [
+              { readSymbol: 'X', writeSymbol: 'Y', direction: 'R' },
+            ] },
+          ],
+          viewport: { panX: 0, panY: 0, zoom: 1 },
+          tmMode: 'deterministic',
+          tmBlankSymbol: '_',
+          acceptanceMode: 'finalState',
+        },
+      });
+      const restored = deserializeFromJson(oldTmJson);
+      const rule = restored.transitions[0]!.tmRules![0]!;
+      expect(rule.readSymbols).toEqual(['X']);
+      expect(rule.writeSymbol).toBe('Y');
+      expect(rule.direction).toBe('R');
+      expect((rule as { readSymbol?: string }).readSymbol).toBeUndefined();
+    });
+
+    it('loads old v1.2.0 PDA files without TM fields unchanged', () => {
+      const oldJson = JSON.stringify({
+        version: '1.2.0',
+        automaton: {
+          id: 'old', name: 'Old PDA', type: 'PDA',
+          alphabet: ['a'],
+          states: [{ id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: true }],
+          transitions: [{ id: 't1', sourceId: 'q0', targetId: 'q0', symbols: [], pdaRules: [{ inputSymbol: 'a', stackPop: 'Z', stackPush: ['Z'] }] }],
+          viewport: { panX: 0, panY: 0, zoom: 1 },
+          acceptanceMode: 'finalState',
+          pdaStackMode: 'pop',
+        },
+      });
+      const restored = deserializeFromJson(oldJson);
+      expect(restored.type).toBe('PDA');
+      expect(restored.tmMode).toBeUndefined();
+      expect(restored.tmBlankSymbol).toBeUndefined();
+    });
   });
 });

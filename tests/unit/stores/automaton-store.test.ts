@@ -201,6 +201,40 @@ describe('automaton store', () => {
       expect(automaton.states).toHaveLength(2);
       expect(automaton.transitions).toHaveLength(1);
     });
+
+    it('switching to TM initializes acceptanceMode, tmMode, tmBlankSymbol', () => {
+      useAutomatonStore.getState().setType(AutomatonType.TM);
+      const { automaton } = useAutomatonStore.getState();
+      expect(automaton.type).toBe(AutomatonType.TM);
+      expect(automaton.acceptanceMode).toBe('finalState');
+      expect(automaton.tmMode).toBe('deterministic');
+      expect(automaton.tmBlankSymbol).toBe('_');
+    });
+
+    it('switching away from TM strips tmRules and clears TM fields', () => {
+      useAutomatonStore.getState().setType(AutomatonType.TM);
+      const q0 = useAutomatonStore.getState().automaton.states[0]!;
+      const q1 = useAutomatonStore.getState().addState({ x: 100, y: 0 });
+      useAutomatonStore.getState().addTransition(q0.id, q1.id, [], undefined, [
+        { readSymbols: ['a'], writeSymbol: 'b', direction: 'R' },
+      ]);
+
+      useAutomatonStore.getState().setType(AutomatonType.DFA);
+
+      const { automaton } = useAutomatonStore.getState();
+      expect(automaton.type).toBe(AutomatonType.DFA);
+      expect(automaton.tmMode).toBeUndefined();
+      expect(automaton.tmBlankSymbol).toBeUndefined();
+      expect(automaton.transitions).toHaveLength(1);
+      expect(automaton.transitions[0]!.tmRules).toBeUndefined();
+    });
+
+    it('switching away from TM with haltOnAccept clears acceptanceMode', () => {
+      useAutomatonStore.getState().setType(AutomatonType.TM);
+      useAutomatonStore.getState().setAcceptanceMode('haltOnAccept');
+      useAutomatonStore.getState().setType(AutomatonType.NFA);
+      expect(useAutomatonStore.getState().automaton.acceptanceMode).toBeUndefined();
+    });
   });
 
   describe('removeState edge cases', () => {

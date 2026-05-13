@@ -1,6 +1,6 @@
 # Automata Simulator — Full LLM Reference
 
-> A web-based visual editor and simulator for finite automata (DFA and NFA).
+> A web-based visual editor and simulator for finite automata (DFA, NFA, PDA) and Turing Machines (TM).
 > URL: https://automata.yuweiss.dev
 > Source: https://github.com/YuvalWS/automata-simulator
 > Summary: https://automata.yuweiss.dev/llms.txt
@@ -29,22 +29,45 @@ const AutomatonStateSchema = z.object({
   isAccepting: z.boolean(),
 });
 
+const PdaRuleSchema = z.object({
+  inputSymbol: z.string(),
+  stackPop: z.string(),
+  stackPush: z.array(z.string()),
+  peekAction: z.enum(['nop', 'push', 'pop']).optional(),
+});
+
+// TmRule: readSymbols is a non-empty array (multiple reads collapse into one rule);
+// writeSymbol is optional (omit / empty = no-op write — head cell unchanged).
+// Files written by v1.3.0 used { readSymbol: string; writeSymbol: string } — the loader
+// accepts both shapes and normalizes v1 → v2 at load time.
+const TmRuleSchema = z.object({
+  readSymbols: z.array(z.string()).min(1),
+  writeSymbol: z.string().optional(),
+  direction: z.enum(['L', 'R', 'S']),
+});
+
 const TransitionSchema = z.object({
   id: z.string().min(1),
   sourceId: z.string().min(1),
   targetId: z.string().min(1),
   symbols: z.array(z.string()),
+  pdaRules: z.array(PdaRuleSchema).optional(),
+  tmRules: z.array(TmRuleSchema).optional(),
   controlPointOffset: PointSchema.optional(),
 });
 
 const AutomatonSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  type: z.enum(['DFA', 'NFA']),
+  type: z.enum(['DFA', 'NFA', 'PDA', 'TM']),
   alphabet: z.array(z.string()),
   states: z.array(AutomatonStateSchema),
   transitions: z.array(TransitionSchema),
   viewport: ViewportSchema,
+  acceptanceMode: z.enum(['finalState', 'emptyStack', 'haltOnAccept']).optional(),
+  pdaStackMode: z.enum(['pop', 'peek']).optional(),
+  tmMode: z.enum(['deterministic', 'nondeterministic']).optional(),
+  tmBlankSymbol: z.string().optional(),
 });
 
 const SaveFileSchema = z.object({
@@ -58,7 +81,7 @@ const SaveFileSchema = z.object({
 ### SaveFile
 | Field | Type | Description |
 |-------|------|-------------|
-| version | string | File format version, currently `"1.0.0"` |
+| version | string | File format version, currently `"1.4.0"` |
 | automaton | Automaton | The automaton data |
 
 ### Automaton
@@ -66,11 +89,15 @@ const SaveFileSchema = z.object({
 |-------|------|-------------|
 | id | string (min 1) | Unique identifier for the automaton |
 | name | string (min 1) | Display name shown in the UI |
-| type | `"DFA"` or `"NFA"` | Automaton type |
-| alphabet | string[] | List of input symbols (excluding ε) |
+| type | `"DFA"`, `"NFA"`, `"PDA"`, or `"TM"` | Automaton type |
+| alphabet | string[] | List of input symbols (excluding ε; informational for TM) |
 | states | State[] | Array of states |
 | transitions | Transition[] | Array of transitions |
 | viewport | Viewport | Camera position and zoom level |
+| acceptanceMode | `"finalState"` / `"emptyStack"` / `"haltOnAccept"` (optional) | PDA: `finalState`/`emptyStack`. TM: `finalState`/`haltOnAccept`. |
+| pdaStackMode | `"pop"` / `"peek"` (optional) | PDA only — `pop` consumes the matched stack symbol; `peek` inspects without consuming |
+| tmMode | `"deterministic"` / `"nondeterministic"` (optional) | TM only — DTM disallows duplicate rules per `(state, readSymbol)` |
+| tmBlankSymbol | string (optional) | TM only — symbol that fills unbounded cells on both sides of the tape (default `"_"`) |
 
 ### State
 | Field | Type | Description |
@@ -87,8 +114,25 @@ const SaveFileSchema = z.object({
 | id | string (min 1) | Unique identifier |
 | sourceId | string (min 1) | ID of the source state |
 | targetId | string (min 1) | ID of the target state (same as sourceId for self-loops) |
-| symbols | string[] | Symbols that trigger this transition |
+| symbols | string[] | Symbols that trigger this transition (DFA/NFA only) |
+| pdaRules | PdaRule[]? | PDA transition rules (mutually exclusive with `symbols`) |
+| tmRules | TmRule[]? | TM transition rules (mutually exclusive with `symbols`) |
 | controlPointOffset | {x, y}? | Optional offset for curved rendering |
+
+### PdaRule
+| Field | Type | Description |
+|-------|------|-------------|
+| inputSymbol | string | Input character to consume, or `"ε"` for no input |
+| stackPop | string | Symbol that must be on the stack top to apply this rule (or `"ε"` for any) |
+| stackPush | string[] | Symbols to push onto the stack (leftmost = new top); empty means no push |
+| peekAction | `"nop"` / `"push"` / `"pop"` (optional) | Only relevant when `pdaStackMode === "peek"` |
+
+### TmRule
+| Field | Type | Description |
+|-------|------|-------------|
+| readSymbols | string[] (min 1) | The rule fires if the head reads any of these symbols. UI label collapses to `0,1,Y → R`. |
+| writeSymbol | string (optional) | Symbol to write at the head before moving. Omit (or empty) for a no-op write — the head cell is left unchanged. Textbook shorthand `Y → R`. |
+| direction | `"L"` / `"R"` / `"S"` | Move head Left, Right, or Stay |
 
 ### Viewport
 | Field | Type | Description |
@@ -109,6 +153,27 @@ const SaveFileSchema = z.object({
 - Epsilon transitions are allowed — use the symbol `"ε"` (U+03B5)
 - During simulation, epsilon-closure is computed automatically
 
+### PDA-specific rules
+- Transitions use `pdaRules`, not `symbols`. Epsilon-input rules consume no input.
+- `stackPop` is matched against the top of the stack (index 0); use `"ε"` to bypass the check.
+- The initial stack contains only the bottom marker `"Z₀"` (U+2080).
+- `acceptanceMode === "finalState"`: accept if any active configuration is in an accepting state at end of input.
+- `acceptanceMode === "emptyStack"`: accept if any configuration has an empty stack at end of input; accepting states are ignored.
+- `pdaStackMode === "peek"`: each rule's `peekAction` selects what happens to the stack after the peek.
+
+### TM-specific rules
+- Transitions use `tmRules`, not `symbols`. There are no epsilon transitions; the head always reads a tape cell.
+- The input word initializes the tape (`[word..., blank, blank, ...]`); head starts at index 0.
+- A rule fires when the symbol at the head matches **any** entry in its `readSymbols` array (textbook label `0,1,Y → R`).
+- `writeSymbol` is optional. When omitted or empty, the head cell is left unchanged (no-op write, textbook label `Y → R`).
+- After applying a rule, the head moves Left, Right, or Stays. The tape grows by one blank cell on either end when the head moves out of bounds.
+- `tmMode === "deterministic"`: at most one rule per `(sourceId, readSym)` pair. A multi-read rule expands to one pair per symbol; two rules conflict if they share even one read symbol. Validator emits an error with a "Switch to NTM" action when duplicates are found.
+- `tmMode === "nondeterministic"`: branches are explored in parallel (capped at 1000 active configurations).
+- `acceptanceMode === "finalState"`: accept on entry to any accepting state (or when a halted branch is in an accepting state).
+- `acceptanceMode === "haltOnAccept"`: any branch that halts (no rule matches the current tape cell) is accepted unconditionally; accepting states are ignored.
+- Hard step cap: 1000 steps. If the machine has not halted by then, the final snapshot's status is `"timeout"`.
+- The `tmBlankSymbol` is a regular tape symbol and is matched literally in rules.
+
 ### General rules
 - Exactly one state must have `isInitial: true`
 - All `sourceId` and `targetId` must reference valid state IDs
@@ -128,7 +193,7 @@ When generating automata for visual display:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.4.0",
   "automaton": {
     "id": "dfa-ends-ab",
     "name": "Ends with ab",
@@ -156,7 +221,7 @@ When generating automata for visual display:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.4.0",
   "automaton": {
     "id": "nfa-a-star-b-star",
     "name": "a*b* (NFA with ε)",
@@ -180,7 +245,7 @@ When generating automata for visual display:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.4.0",
   "automaton": {
     "id": "dfa-even-a",
     "name": "Even number of a's",
@@ -197,6 +262,69 @@ When generating automata for visual display:
       { "id": "t3", "sourceId": "s1", "targetId": "s1", "symbols": ["b"] }
     ],
     "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## Example 4: PDA for a^n b^n (final-state acceptance)
+
+```json
+{
+  "version": "1.4.0",
+  "automaton": {
+    "id": "pda-anbn",
+    "name": "a^n b^n",
+    "type": "PDA",
+    "alphabet": ["a", "b"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true,  "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 300, "y": 200 }, "isInitial": false, "isAccepting": false },
+      { "id": "s2", "name": "qf", "position": { "x": 500, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s0", "symbols": [],
+        "pdaRules": [{ "inputSymbol": "a", "stackPop": "Z₀", "stackPush": ["A", "Z₀"] }] },
+      { "id": "t1", "sourceId": "s0", "targetId": "s0", "symbols": [],
+        "pdaRules": [{ "inputSymbol": "a", "stackPop": "A", "stackPush": ["A", "A"] }] },
+      { "id": "t2", "sourceId": "s0", "targetId": "s1", "symbols": [],
+        "pdaRules": [{ "inputSymbol": "ε", "stackPop": "A", "stackPush": ["A"] }] },
+      { "id": "t3", "sourceId": "s1", "targetId": "s1", "symbols": [],
+        "pdaRules": [{ "inputSymbol": "b", "stackPop": "A", "stackPush": [] }] },
+      { "id": "t4", "sourceId": "s1", "targetId": "s2", "symbols": [],
+        "pdaRules": [{ "inputSymbol": "ε", "stackPop": "Z₀", "stackPush": ["Z₀"] }] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
+    "acceptanceMode": "finalState",
+    "pdaStackMode": "pop"
+  }
+}
+```
+
+## Example 5: Turing Machine that flips a single `0` to `1`
+
+```json
+{
+  "version": "1.4.0",
+  "automaton": {
+    "id": "tm-flip",
+    "name": "Flip 0 to 1",
+    "type": "TM",
+    "alphabet": ["0", "1"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true,  "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 300, "y": 200 }, "isInitial": false, "isAccepting": false },
+      { "id": "s2", "name": "qf", "position": { "x": 500, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": [],
+        "tmRules": [{ "readSymbols": ["0"], "writeSymbol": "1", "direction": "R" }] },
+      { "id": "t1", "sourceId": "s1", "targetId": "s2", "symbols": [],
+        "tmRules": [{ "readSymbols": ["_"], "direction": "S" }] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
+    "tmMode": "deterministic",
+    "tmBlankSymbol": "_",
+    "acceptanceMode": "finalState"
   }
 }
 ```
@@ -219,8 +347,8 @@ When generating automata for visual display:
 ## Describing Automata in Natural Language
 
 When asked to explain an automaton JSON file:
-1. Identify the type (DFA/NFA) and the alphabet
-2. Identify the initial state and accepting state(s)
-3. Describe the transition function (which symbols move between which states)
+1. Identify the type (DFA/NFA/PDA/TM) and the alphabet
+2. Identify the initial state and accepting state(s); for TM also note `tmBlankSymbol`, `tmMode`, and `acceptanceMode`
+3. Describe the transition function (DFA/NFA: symbols; PDA: input/pop/push triples; TM: read/write/move triples)
 4. Describe the language the automaton accepts in set-builder notation or plain English
 5. Note any self-loops and their purpose

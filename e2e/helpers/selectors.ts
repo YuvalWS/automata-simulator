@@ -35,6 +35,13 @@ export const SEL = {
   simBatchInput: '.sim-batch-input',
   simStatus: '.sim-status',
   simModeToggle: '.sim-mode-toggle',
+  simTmTape: '[data-testid="sim-tm-tape"]',
+  simTmSection: '[data-testid="sim-tm-section"]',
+
+  // TM properties
+  tmModeSelect: '[data-testid="tm-mode-select"]',
+  tmAcceptanceModeSelect: '[data-testid="tm-acceptance-mode-select"]',
+  tmBlankSymbolInput: '[data-testid="tm-blank-symbol-input"]',
 
   // Toolbar buttons
   toolbarNewState: '.toolbar-new-state',
