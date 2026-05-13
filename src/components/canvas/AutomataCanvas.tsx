@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
-import type { Automaton, PdaRule } from '@/models/automaton';
+import type { Automaton, PdaRule, TmRule } from '@/models/automaton';
 import { useEditorStore } from '@/stores/editor-store';
 import { useSimulationStore } from '@/stores/simulation-store';
 import { computeEdgePaths } from '@/services/layout/edge-routing';
@@ -31,6 +31,7 @@ interface SymbolModalState {
   position: { x: number; y: number };
   existingSymbols?: string[];
   existingPdaRules?: PdaRule[];
+  existingTmRules?: TmRule[];
   editingTransitionId?: string;
 }
 
@@ -480,6 +481,7 @@ export function AutomataCanvas() {
           position: { x: e.clientX, y: e.clientY },
           existingSymbols: transition.symbols,
           existingPdaRules: transition.pdaRules,
+          existingTmRules: transition.tmRules,
           editingTransitionId: transitionId,
         });
       }
@@ -488,16 +490,18 @@ export function AutomataCanvas() {
   );
 
   const handleSymbolModalSubmit = useCallback(
-    (symbols: string[], pdaRules?: PdaRule[]) => {
+    (symbols: string[], pdaRules?: PdaRule[], tmRules?: TmRule[]) => {
       if (!symbolModal) return;
       if (symbolModal.editingTransitionId) {
         if (pdaRules) {
           updateTransition(symbolModal.editingTransitionId, { pdaRules });
+        } else if (tmRules) {
+          updateTransition(symbolModal.editingTransitionId, { tmRules });
         } else {
           updateTransition(symbolModal.editingTransitionId, { symbols });
         }
       } else {
-        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols, pdaRules);
+        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols, pdaRules, tmRules);
       }
       setSymbolModal(null);
     },
@@ -624,6 +628,8 @@ export function AutomataCanvas() {
           targetId: transition.targetId,
           position: { x: clientX, y: clientY },
           existingSymbols: transition.symbols,
+          existingPdaRules: transition.pdaRules,
+          existingTmRules: transition.tmRules,
           editingTransitionId: transition.id,
         });
       }
@@ -663,6 +669,8 @@ export function AutomataCanvas() {
                 targetId: transition.targetId,
                 position: { x: clientX, y: clientY },
                 existingSymbols: transition.symbols,
+                existingPdaRules: transition.pdaRules,
+                existingTmRules: transition.tmRules,
                 editingTransitionId: transition.id,
               }),
             },
@@ -967,8 +975,10 @@ export function AutomataCanvas() {
           position={symbolModal.position}
           initialSymbols={symbolModal.existingSymbols}
           initialPdaRules={symbolModal.existingPdaRules}
+          initialTmRules={symbolModal.existingTmRules}
           automatonType={automaton.type}
           pdaStackMode={automaton.pdaStackMode}
+          tmBlankSymbol={automaton.tmBlankSymbol}
           onSubmit={handleSymbolModalSubmit}
           onCancel={handleSymbolModalCancel}
         />

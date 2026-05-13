@@ -5,6 +5,7 @@
 - Demo pictures and videos for the README and website, showing off features and how to use the app.
 
 ## Done
+- ~~Turing Machine simulation~~ — TM type with `read → write, move (L/S/R)` rules, configurable blank symbol, **deterministic (DTM)** and **nondeterministic (NTM)** modes, **final-state** and **halt-on-accept** acceptance, live tape visualization with head marker, 1000-step cap with `timeout` status, DTM duplicate-rule validation with "switch to NTM" action
 - ~~PDA (pushdown automata) support~~ — PDA type with stack operations, PDA transition rules (input/pop/push), final-state and empty-stack acceptance modes, stack visualization during simulation, nondeterministic configuration tracking
 - ~~Tab support for multiple automata~~ — tab bar UI, per-tab state isolation, per-tab file handles, multi-tab autosave, keyboard shortcuts (Ctrl+T/W/PgDn/PgUp)
 - ~~SEO improvements~~ — meta tags, Open Graph, Twitter Cards, robots.txt, sitemap.xml, manifest.json, OG preview image
@@ -15,7 +16,9 @@
 ## Other Ideas
 - Image export to clipboard (currently only to file) + make the export ignore selection highlights (but keep simulation trace highlights if in simulation mode)
 - NFA to DFA conversion (subset construction)
-- Turing Machine simulation
+- Multi-tape Turing Machines
+- Explicit tape alphabet for TM (separate from input alphabet)
+- TM transducer outputs (capture tape content as machine output)
 - Moore/Mealy machines
 - Regex to NFA conversion
 - equality testing between automata (using known algorithms)

@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { EPSILON, normalizeEpsilon } from '@/models/epsilon';
+import { DEFAULT_BLANK_SYMBOL, EPSILON, normalizeEpsilon } from '@/models/epsilon';
 import { AutomatonType } from '@/models/types';
-import type { PdaStackMode } from '@/models/types';
+import type { PdaStackMode, TmDirection } from '@/models/types';
 import { useViewport } from '@/hooks/use-viewport';
-import type { PdaRule } from '@/models/automaton';
+import type { PdaRule, TmRule } from '@/models/automaton';
 import './TransitionSymbolModal.css';
 
 interface TransitionSymbolModalProps {
   position: { x: number; y: number };
   initialSymbols?: string[];
   initialPdaRules?: PdaRule[];
+  initialTmRules?: TmRule[];
   automatonType: AutomatonType;
   pdaStackMode?: PdaStackMode;
-  onSubmit: (symbols: string[], pdaRules?: PdaRule[]) => void;
+  tmBlankSymbol?: string;
+  onSubmit: (symbols: string[], pdaRules?: PdaRule[], tmRules?: TmRule[]) => void;
   onCancel: () => void;
 }
 
@@ -46,10 +48,39 @@ function createEmptyRule(): PdaRule {
   return { inputSymbol: '', stackPop: '', stackPush: [] };
 }
 
-export function TransitionSymbolModal({ position, initialSymbols, initialPdaRules, automatonType, pdaStackMode, onSubmit, onCancel }: TransitionSymbolModalProps) {
+/**
+ * Editor-local shape: keeps the raw `readSymbolsText` so the user can type
+ * `0, 1, Y, Z` without the parser splitting mid-keystroke. Parsed into
+ * `readSymbols: string[]` at submit time.
+ */
+interface TmRuleDraft {
+  readSymbolsText: string;
+  writeSymbol: string;
+  direction: TmDirection;
+}
+
+function createEmptyTmDraft(blank: string): TmRuleDraft {
+  return { readSymbolsText: blank, writeSymbol: '', direction: 'R' };
+}
+
+function tmRuleToDraft(rule: TmRule): TmRuleDraft {
+  return {
+    readSymbolsText: rule.readSymbols.join(', '),
+    writeSymbol: rule.writeSymbol ?? '',
+    direction: rule.direction,
+  };
+}
+
+function parseReadSymbols(text: string): string[] {
+  return text.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+export function TransitionSymbolModal({ position, initialSymbols, initialPdaRules, initialTmRules, automatonType, pdaStackMode, tmBlankSymbol, onSubmit, onCancel }: TransitionSymbolModalProps) {
   const isPDA = automatonType === AutomatonType.PDA;
+  const isTM = automatonType === AutomatonType.TM;
   const isDFA = automatonType === AutomatonType.DFA;
   const isPeek = isPDA && pdaStackMode === 'peek';
+  const blank = tmBlankSymbol && tmBlankSymbol.length > 0 ? tmBlankSymbol : DEFAULT_BLANK_SYMBOL;
 
   // DFA/NFA state
   const [value, setValue] = useState(initialSymbols?.join(', ') ?? '');
@@ -63,12 +94,19 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
       : [createEmptyRule()],
   );
 
+  // TM state — keeps the raw read-symbols text per rule for free-form typing.
+  const [tmRules, setTmRules] = useState<TmRuleDraft[]>(
+    initialTmRules && initialTmRules.length > 0
+      ? initialTmRules.map(tmRuleToDraft)
+      : [createEmptyTmDraft(blank)],
+  );
+
   useEffect(() => {
-    if (!isPDA) {
+    if (!isPDA && !isTM) {
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isPDA]);
+  }, [isPDA, isTM]);
 
   const handleDfaNfaSubmit = () => {
     const symbols = value.split(',').map((s) => s.trim()).filter(Boolean);
@@ -95,7 +133,22 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
     }
   };
 
-  const handleSubmit = isPDA ? handlePdaSubmit : handleDfaNfaSubmit;
+  const handleTmSubmit = () => {
+    const parsed: TmRule[] = tmRules
+      .map((draft) => {
+        const reads = parseReadSymbols(draft.readSymbolsText);
+        if (reads.length === 0) return null;
+        const rule: TmRule = { readSymbols: reads, direction: draft.direction };
+        if (draft.writeSymbol.length > 0) rule.writeSymbol = draft.writeSymbol;
+        return rule;
+      })
+      .filter((r): r is TmRule => r !== null);
+    if (parsed.length > 0) {
+      onSubmit([], undefined, parsed);
+    }
+  };
+
+  const handleSubmit = isPDA ? handlePdaSubmit : isTM ? handleTmSubmit : handleDfaNfaSubmit;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -137,10 +190,134 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
     updateRule(index, field, EPSILON);
   };
 
+  const updateTmRule = (index: number, field: keyof TmRuleDraft, val: string) => {
+    setTmRules((prev) => prev.map((r, i) => {
+      if (i !== index) return r;
+      if (field === 'direction') return { ...r, direction: val as TmDirection };
+      return { ...r, [field]: val };
+    }));
+  };
+
+  const appendToReadSymbols = (index: number, sym: string) => {
+    setTmRules((prev) => prev.map((r, i) => {
+      if (i !== index) return r;
+      const existing = r.readSymbolsText.trim();
+      const next = existing.length === 0 ? sym : `${existing}, ${sym}`;
+      return { ...r, readSymbolsText: next };
+    }));
+  };
+
+  const addTmRule = () => {
+    setTmRules((prev) => [...prev, createEmptyTmDraft(blank)]);
+  };
+
+  const removeTmRule = (index: number) => {
+    setTmRules((prev) => prev.length > 1 ? prev.filter((_, i) => i !== index) : prev);
+  };
+
   // Clamp position to viewport
-  const modalWidth = isPDA ? 360 : 260;
+  const modalWidth = isPDA || isTM ? 360 : 260;
   const x = Math.min(position.x, window.innerWidth - modalWidth - 20);
-  const y = Math.min(position.y, window.innerHeight - (isPDA ? 300 : 120));
+  const y = Math.min(position.y, window.innerHeight - (isPDA || isTM ? 300 : 120));
+
+  if (isTM) {
+    return (
+      <div className="symbol-modal-overlay" onMouseDown={onCancel}>
+        <div
+          className="symbol-modal symbol-modal-tm"
+          style={{ left: x, top: y }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="symbol-modal-title">
+            {initialTmRules ? 'Edit TM Transition Rules' : 'Enter TM Transition Rules'}
+          </div>
+
+          <div className="tm-rules-list">
+            {tmRules.map((rule, i) => (
+              <div key={i} className="tm-rule-row" onKeyDown={handleKeyDown}>
+                <label className="tm-field">
+                  <span className="tm-field-label">Read</span>
+                  <div className="tm-field-input-row">
+                    <input
+                      type="text"
+                      className="symbol-modal-input tm-input"
+                      value={rule.readSymbolsText}
+                      onChange={(e) => updateTmRule(i, 'readSymbolsText', e.target.value)}
+                      placeholder="e.g. 0,1,Y"
+                      autoFocus={i === 0}
+                    />
+                    <button
+                      type="button"
+                      className="symbol-modal-btn tm-blank-btn"
+                      onClick={() => appendToReadSymbols(i, blank)}
+                      title={`Append blank (${blank})`}
+                    >{blank}</button>
+                  </div>
+                </label>
+                <label className="tm-field">
+                  <span className="tm-field-label">Write</span>
+                  <div className="tm-field-input-row">
+                    <input
+                      type="text"
+                      className="symbol-modal-input tm-input"
+                      value={rule.writeSymbol}
+                      onChange={(e) => updateTmRule(i, 'writeSymbol', e.target.value)}
+                      placeholder="(no write)"
+                    />
+                    <button
+                      type="button"
+                      className="symbol-modal-btn tm-blank-btn"
+                      onClick={() => updateTmRule(i, 'writeSymbol', blank)}
+                      title={`Set to blank (${blank})`}
+                    >{blank}</button>
+                  </div>
+                </label>
+                <label className="tm-field tm-field-direction">
+                  <span className="tm-field-label">Move</span>
+                  <div className="tm-direction-radios">
+                    {(['L', 'S', 'R'] as const).map((d) => (
+                      <label key={d} className="tm-direction-radio">
+                        <input
+                          type="radio"
+                          name={`tm-dir-${i}`}
+                          value={d}
+                          checked={rule.direction === d}
+                          onChange={() => updateTmRule(i, 'direction', d)}
+                        />
+                        {d}
+                      </label>
+                    ))}
+                  </div>
+                </label>
+                {tmRules.length > 1 && (
+                  <button
+                    type="button"
+                    className="symbol-modal-btn tm-remove-btn"
+                    onClick={() => removeTmRule(i)}
+                    title="Remove rule"
+                  >{'✖'}</button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button type="button" className="symbol-modal-btn tm-add-rule" onClick={addTmRule}>
+            + Add Rule
+          </button>
+
+          <div className="symbol-modal-hint">
+            Multiple reads: comma-separated (e.g. <code>0,1,Y,Z</code>). Leave write blank for no-op
+            ({' '}like <code>Y → R</code>). Use the {blank} button for the blank symbol.
+          </div>
+
+          <div className="symbol-modal-actions">
+            <button className="symbol-modal-btn cancel" onClick={onCancel}>Cancel</button>
+            <button className="symbol-modal-btn confirm" onClick={handleTmSubmit}>Confirm</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isPDA) {
     const stackLabel = isPeek ? 'Peek' : 'Pop';

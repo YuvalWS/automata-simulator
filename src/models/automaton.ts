@@ -1,6 +1,6 @@
 import type { Point, Viewport } from './geometry';
 import { AutomatonType } from './types';
-import type { PdaAcceptanceMode, PdaStackMode } from './types';
+import type { AcceptanceMode, PdaStackMode, TmDirection, TmMode } from './types';
 import { generateId } from '@/utils/id';
 
 export interface AutomatonState {
@@ -18,12 +18,19 @@ export interface PdaRule {
   peekAction?: 'nop' | 'push' | 'pop'; // only relevant when automaton.pdaStackMode === 'peek'
 }
 
+export interface TmRule {
+  readSymbols: string[];    // matches if the tape head reads any of these
+  writeSymbol?: string;     // undefined or empty → no-op write (write back the read symbol)
+  direction: TmDirection;   // 'L' | 'R' | 'S'
+}
+
 export interface Transition {
   id: string;
   sourceId: string;
   targetId: string;
   symbols: string[];
   pdaRules?: PdaRule[];
+  tmRules?: TmRule[];
   controlPointOffset?: Point;
 }
 
@@ -35,8 +42,10 @@ export interface Automaton {
   states: AutomatonState[];
   transitions: Transition[];
   viewport: Viewport;
-  acceptanceMode?: PdaAcceptanceMode;
+  acceptanceMode?: AcceptanceMode;
   pdaStackMode?: PdaStackMode;
+  tmMode?: TmMode;
+  tmBlankSymbol?: string;
 }
 
 export function createEmptyAutomaton(name = 'Untitled'): Automaton {

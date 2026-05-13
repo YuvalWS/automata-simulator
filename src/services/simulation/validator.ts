@@ -44,6 +44,49 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
     return messages;
   }
 
+  if (automaton.type === AutomatonType.TM) {
+    const hasTmRules = automaton.transitions.some((t) => t.tmRules && t.tmRules.length > 0);
+    if (!hasTmRules && automaton.transitions.length > 0) {
+      messages.push({ type: 'warning', message: 'No transitions have TM rules.' });
+    }
+
+    const mode = automaton.tmMode ?? 'deterministic';
+    if (mode === 'deterministic') {
+      // A rule's readSymbols array expands to one (state, readSym) pair per symbol.
+      // Two rules conflict if they share even a single read symbol from the same state.
+      const seen = new Map<string, number>();
+      for (const t of automaton.transitions) {
+        if (!t.tmRules) continue;
+        for (const r of t.tmRules) {
+          for (const sym of r.readSymbols) {
+            const key = `${t.sourceId}\x00${sym}`;
+            seen.set(key, (seen.get(key) ?? 0) + 1);
+          }
+        }
+      }
+      for (const [key, count] of seen) {
+        if (count > 1) {
+          const [stateId, sym] = key.split('\x00');
+          const stateName = automaton.states.find((s) => s.id === stateId)?.name ?? stateId;
+          messages.push({
+            type: 'error',
+            message: `DTM conflict: state "${stateName}" has ${count} rules for read symbol "${sym}".`,
+            action: { label: 'Switch to NTM', key: 'switch-ntm' },
+          });
+        }
+      }
+    }
+
+    if (automaton.acceptanceMode === 'haltOnAccept') {
+      const hasAccepting = automaton.states.some((s) => s.isAccepting);
+      if (hasAccepting) {
+        messages.push({ type: 'warning', message: 'Accepting states are ignored in halt-on-accept mode.' });
+      }
+    }
+
+    return messages;
+  }
+
   if (automaton.type === AutomatonType.DFA) {
     // Error if DFA has epsilon transitions
     const hasEpsilon = automaton.transitions.some((t) => t.symbols.includes(EPSILON));

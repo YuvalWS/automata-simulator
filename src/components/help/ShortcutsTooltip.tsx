@@ -53,6 +53,7 @@ const desktopInstructions = [
   'Click "PNG" to export the diagram as an image.',
   'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA/PDA).',
   'PDA transitions use the format: input, pop \u2192 push. Switch to PDA type to define stack operations.',
+  'TM transitions use the format: read \u2192 write, move (L/S/R). Switch to TM type and use the blank-symbol button to fill the default blank.',
 ];
 
 const mobileInstructions = [
@@ -68,7 +69,8 @@ const mobileInstructions = [
   'Tap Simulate in the bottom bar to enter simulation mode.',
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
-  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
+  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA/PDA).',
+  'TM transitions use the format: read \u2192 write, move (L/S/R).',
   'Open the hamburger menu to Save, Load, or Export PNG.',
   'Toggle dark mode or switch between touch/desktop UI from the hamburger menu.',
 ];

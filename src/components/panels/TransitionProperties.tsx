@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import type { Transition, PdaRule } from '@/models/automaton';
+import type { Transition, PdaRule, TmRule } from '@/models/automaton';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
-import { EPSILON } from '@/models/epsilon';
+import type { TmDirection } from '@/models/types';
+import { DEFAULT_BLANK_SYMBOL, EPSILON } from '@/models/epsilon';
 
 interface TransitionPropertiesProps {
   transition: Transition;
@@ -16,6 +17,10 @@ export function TransitionProperties({ transition }: TransitionPropertiesProps) 
   const source = automaton.states.find((s) => s.id === transition.sourceId);
   const target = automaton.states.find((s) => s.id === transition.targetId);
   const isPDA = automaton.type === AutomatonType.PDA;
+  const isTM = automaton.type === AutomatonType.TM;
+  const blank = automaton.tmBlankSymbol && automaton.tmBlankSymbol.length > 0
+    ? automaton.tmBlankSymbol
+    : DEFAULT_BLANK_SYMBOL;
 
   useEffect(() => {
     setSymbolsText(transition.symbols.join(', '));
@@ -63,6 +68,33 @@ export function TransitionProperties({ transition }: TransitionPropertiesProps) 
     }
   };
 
+  const handleTmRuleChange = (index: number, field: 'readSymbolsText' | 'writeSymbol' | 'direction', value: string) => {
+    const rules = [...(transition.tmRules ?? [])];
+    const rule: TmRule = { ...rules[index]! };
+    if (field === 'direction') {
+      rule.direction = value as TmDirection;
+    } else if (field === 'readSymbolsText') {
+      rule.readSymbols = value.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+    } else if (field === 'writeSymbol') {
+      if (value.length > 0) rule.writeSymbol = value;
+      else delete rule.writeSymbol;
+    }
+    rules[index] = rule;
+    updateTransition(transition.id, { tmRules: rules });
+  };
+
+  const addTmRule = () => {
+    const rules: TmRule[] = [...(transition.tmRules ?? []), { readSymbols: [blank], direction: 'R' }];
+    updateTransition(transition.id, { tmRules: rules });
+  };
+
+  const removeTmRule = (index: number) => {
+    const rules = (transition.tmRules ?? []).filter((_, i) => i !== index);
+    if (rules.length > 0) {
+      updateTransition(transition.id, { tmRules: rules });
+    }
+  };
+
   return (
     <div className="panel-section" data-testid="transition-properties">
       <h3 className="panel-title">Transition Properties</h3>
@@ -77,7 +109,7 @@ export function TransitionProperties({ transition }: TransitionPropertiesProps) 
         <span className="panel-value">{target?.name ?? 'unknown'}</span>
       </div>
 
-      {!isPDA && (
+      {!isPDA && !isTM && (
         <label className="panel-field">
           <span className="panel-label">Symbols (comma-separated)</span>
           <input
@@ -138,6 +170,55 @@ export function TransitionProperties({ transition }: TransitionPropertiesProps) 
             </div>
           ))}
           <button className="pda-prop-add" onClick={addPdaRule}>+ Add Rule</button>
+        </div>
+      )}
+
+      {isTM && (
+        <div className="panel-field">
+          <span className="panel-label">TM Rules</span>
+          {(transition.tmRules ?? []).map((rule, i) => (
+            <div key={i} className="pda-prop-rule" data-testid={`tm-rule-${i}`}>
+              <div className="pda-prop-rule-fields">
+                <input
+                  type="text"
+                  className="panel-input pda-prop-input"
+                  defaultValue={rule.readSymbols.join(', ')}
+                  onBlur={(e) => handleTmRuleChange(i, 'readSymbolsText', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="read (comma-separated)"
+                  title="Read symbols (comma-separated)"
+                />
+                <span className="pda-prop-sep">{'→'}</span>
+                <input
+                  type="text"
+                  className="panel-input pda-prop-input"
+                  value={rule.writeSymbol ?? ''}
+                  onChange={(e) => handleTmRuleChange(i, 'writeSymbol', e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="(no write)"
+                  title="Write symbol (leave blank for no-op)"
+                />
+                <select
+                  className="panel-select pda-prop-input"
+                  value={rule.direction}
+                  onChange={(e) => handleTmRuleChange(i, 'direction', e.target.value)}
+                  title="Head movement"
+                >
+                  <option value="L">L</option>
+                  <option value="S">S</option>
+                  <option value="R">R</option>
+                </select>
+                {(transition.tmRules ?? []).length > 1 && (
+                  <button
+                    className="pda-prop-remove"
+                    onClick={() => removeTmRule(i)}
+                    title="Remove rule"
+                  >{'✖'}</button>
+                )}
+              </div>
+            </div>
+          ))}
+          <button className="pda-prop-add" onClick={addTmRule}>+ Add Rule</button>
         </div>
       )}
 

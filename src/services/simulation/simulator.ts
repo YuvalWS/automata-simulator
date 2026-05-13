@@ -1,19 +1,32 @@
-import type { Automaton, PdaRule } from '@/models/automaton';
+import type { Automaton, PdaRule, TmRule } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
-import { EPSILON, STACK_BOTTOM } from '@/models/epsilon';
+import { DEFAULT_BLANK_SYMBOL, EPSILON, STACK_BOTTOM } from '@/models/epsilon';
 
 export interface PdaConfiguration {
   stateId: string;
   stack: string[]; // index 0 = top of stack
 }
 
+export interface TmConfiguration {
+  stateId: string;
+  tape: string[]; // dense; grows on either end as the head moves out of bounds
+  headIndex: number; // index into tape[]
+  leftmostIndex: number; // logical absolute index of tape[0]; decrements when we prepend
+}
+
 export interface SimulationSnapshot {
   step: number;
+  /**
+   * For DFA/NFA/PDA: index of the consumed input symbol (-1 before any symbol).
+   * For TM: logical absolute head position (`headIndex + leftmostIndex` of the first config),
+   * since the TM does not consume the word symbol-by-symbol.
+   */
   symbolIndex: number;
   activeStateIds: string[];
   traversedTransitionIds: string[];
-  status: 'running' | 'accepted' | 'rejected';
+  status: 'running' | 'accepted' | 'rejected' | 'timeout';
   configurations?: PdaConfiguration[];
+  tmConfigurations?: TmConfiguration[];
 }
 
 export interface SimulationTrace {
@@ -158,6 +171,9 @@ export function buildSimulationTrace(automaton: Automaton, word: string[]): Simu
   }
   if (automaton.type === AutomatonType.PDA) {
     return buildPdaTrace(automaton, word);
+  }
+  if (automaton.type === AutomatonType.TM) {
+    return buildTmTrace(automaton, word);
   }
   return buildNfaTrace(automaton, word);
 }
@@ -412,5 +428,180 @@ function buildPdaTrace(automaton: Automaton, word: string[]): SimulationTrace {
     });
   }
 
+  return { word, snapshots };
+}
+
+const MAX_TM_STEPS = 1000;
+const MAX_TM_CONFIGURATIONS = 1000;
+
+function cloneTmConfig(c: TmConfiguration): TmConfiguration {
+  return { stateId: c.stateId, tape: [...c.tape], headIndex: c.headIndex, leftmostIndex: c.leftmostIndex };
+}
+
+/**
+ * Apply a TM rule to a configuration: write at the head, move L/R/S.
+ * Tape grows by one blank cell on either end when the head moves out of bounds.
+ * Returns a new configuration with a placeholder stateId (caller fills in target).
+ *
+ * If `rule.writeSymbol` is undefined or empty, the head cell is left unchanged
+ * (writes back the read symbol). This is the textbook "no-op write" shorthand,
+ * displayed in the UI as `<reads> → <direction>` without a write column.
+ */
+function applyTmRule(c: TmConfiguration, rule: TmRule, readSym: string, blank: string): TmConfiguration {
+  const tape = [...c.tape];
+  const writeSym = rule.writeSymbol && rule.writeSymbol.length > 0 ? rule.writeSymbol : readSym;
+  tape[c.headIndex] = writeSym;
+  let headIndex = c.headIndex;
+  let leftmostIndex = c.leftmostIndex;
+  if (rule.direction === 'L') {
+    headIndex -= 1;
+    if (headIndex < 0) {
+      tape.unshift(blank);
+      headIndex = 0;
+      leftmostIndex -= 1;
+    }
+  } else if (rule.direction === 'R') {
+    headIndex += 1;
+    if (headIndex >= tape.length) {
+      tape.push(blank);
+    }
+  }
+  // 'S': stay — head unchanged
+  return { stateId: '', tape, headIndex, leftmostIndex };
+}
+
+/**
+ * Build a simulation trace for a Turing machine.
+ *
+ * Semantics:
+ *  - The word initializes the tape (empty word → single blank cell). The TM does NOT
+ *    consume the word symbol-by-symbol; it reads from `tape[headIndex]` every step.
+ *  - `acceptanceMode='finalState'`: accept as soon as a configuration enters an accepting state.
+ *    A halted branch (no applicable rule) is accepting iff its state is accepting.
+ *  - `acceptanceMode='haltOnAccept'`: a branch that halts (no applicable rule) is accepted unconditionally.
+ *    Note this uses the operational definition "no applicable rule from current configuration"
+ *    rather than a dedicated halt state.
+ *  - Hard step cap of `MAX_TM_STEPS`; on overflow the final snapshot status is `'timeout'`.
+ *  - NTM: all matching rules are explored in parallel (capped at `MAX_TM_CONFIGURATIONS`).
+ *    DTM is enforced upstream by the validator; the simulator uses the same code path.
+ */
+function buildTmTrace(automaton: Automaton, word: string[]): SimulationTrace {
+  const initialState = automaton.states.find((s) => s.isInitial);
+  if (!initialState) {
+    return {
+      word,
+      snapshots: [{ step: 0, symbolIndex: -1, activeStateIds: [], traversedTransitionIds: [], status: 'rejected' }],
+    };
+  }
+
+  const blank = automaton.tmBlankSymbol && automaton.tmBlankSymbol.length > 0
+    ? automaton.tmBlankSymbol
+    : DEFAULT_BLANK_SYMBOL;
+  const acceptMode = automaton.acceptanceMode === 'haltOnAccept' ? 'haltOnAccept' : 'finalState';
+
+  const initialTape = word.length > 0 ? [...word] : [blank];
+  let configs: TmConfiguration[] = [{
+    stateId: initialState.id,
+    tape: initialTape,
+    headIndex: 0,
+    leftmostIndex: 0,
+  }];
+
+  const snapshots: SimulationSnapshot[] = [];
+
+  const initiallyAccepted = acceptMode === 'finalState' && initialState.isAccepting;
+  snapshots.push({
+    step: 0,
+    symbolIndex: 0,
+    activeStateIds: [initialState.id],
+    traversedTransitionIds: [],
+    status: initiallyAccepted ? 'accepted' : 'running',
+    tmConfigurations: configs.map(cloneTmConfig),
+  });
+  if (initiallyAccepted) return { word, snapshots };
+
+  for (let step = 1; step <= MAX_TM_STEPS; step++) {
+    const nextConfigs: TmConfiguration[] = [];
+    const traversedIds: string[] = [];
+    let haltAccepted = false;
+
+    outer: for (const config of configs) {
+      const readSym = config.headIndex >= 0 && config.headIndex < config.tape.length
+        ? config.tape[config.headIndex]!
+        : blank;
+
+      let matched = false;
+      for (const t of automaton.transitions) {
+        if (t.sourceId !== config.stateId || !t.tmRules) continue;
+        for (const rule of t.tmRules) {
+          if (!rule.readSymbols.includes(readSym)) continue;
+          matched = true;
+          const newConfig = applyTmRule(config, rule, readSym, blank);
+          newConfig.stateId = t.targetId;
+          nextConfigs.push(newConfig);
+          traversedIds.push(t.id);
+          if (nextConfigs.length >= MAX_TM_CONFIGURATIONS) break outer;
+        }
+      }
+
+      if (!matched) {
+        // This branch halts. Determine acceptance.
+        const stateAccepting = automaton.states.find((s) => s.id === config.stateId)?.isAccepting ?? false;
+        if (acceptMode === 'haltOnAccept' || stateAccepting) {
+          haltAccepted = true;
+        }
+      }
+    }
+
+    // finalState: accepted on entering an accepting state.
+    if (!haltAccepted && acceptMode === 'finalState') {
+      haltAccepted = nextConfigs.some((c) =>
+        automaton.states.find((s) => s.id === c.stateId)?.isAccepting,
+      );
+    }
+
+    const stepActiveIds = [...new Set(nextConfigs.map((c) => c.stateId))];
+    const firstCfg = nextConfigs[0];
+    const headPos = firstCfg ? firstCfg.headIndex + firstCfg.leftmostIndex : 0;
+
+    if (haltAccepted) {
+      snapshots.push({
+        step,
+        symbolIndex: headPos,
+        activeStateIds: stepActiveIds,
+        traversedTransitionIds: [...new Set(traversedIds)],
+        status: 'accepted',
+        tmConfigurations: nextConfigs.map(cloneTmConfig),
+      });
+      return { word, snapshots };
+    }
+
+    if (nextConfigs.length === 0) {
+      snapshots.push({
+        step,
+        symbolIndex: 0,
+        activeStateIds: [],
+        traversedTransitionIds: [...new Set(traversedIds)],
+        status: 'rejected',
+        tmConfigurations: [],
+      });
+      return { word, snapshots };
+    }
+
+    snapshots.push({
+      step,
+      symbolIndex: headPos,
+      activeStateIds: stepActiveIds,
+      traversedTransitionIds: [...new Set(traversedIds)],
+      status: 'running',
+      tmConfigurations: nextConfigs.map(cloneTmConfig),
+    });
+
+    configs = nextConfigs;
+  }
+
+  // Step cap exceeded — mutate the last snapshot to 'timeout'.
+  const last = snapshots[snapshots.length - 1];
+  if (last && last.status === 'running') last.status = 'timeout';
   return { word, snapshots };
 }

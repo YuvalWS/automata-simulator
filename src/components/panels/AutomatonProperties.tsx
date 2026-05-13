@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
-import type { PdaAcceptanceMode, PdaStackMode } from '@/models/types';
+import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
@@ -10,8 +10,15 @@ export function AutomatonProperties() {
   const setAlphabet = useAutomatonStore((s) => s.setAlphabet);
   const setAcceptanceMode = useAutomatonStore((s) => s.setAcceptanceMode);
   const setPdaStackMode = useAutomatonStore((s) => s.setPdaStackMode);
+  const setTmMode = useAutomatonStore((s) => s.setTmMode);
+  const setTmBlankSymbol = useAutomatonStore((s) => s.setTmBlankSymbol);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
+  const [blankText, setBlankText] = useState(automaton.tmBlankSymbol ?? '_');
+
+  useEffect(() => {
+    setBlankText(automaton.tmBlankSymbol ?? '_');
+  }, [automaton.tmBlankSymbol, automaton.id]);
 
   useEffect(() => {
     setLocalName(automaton.name);
@@ -63,6 +70,7 @@ export function AutomatonProperties() {
           <option value={AutomatonType.DFA}>DFA</option>
           <option value={AutomatonType.NFA}>NFA</option>
           <option value={AutomatonType.PDA}>PDA</option>
+          <option value={AutomatonType.TM}>TM</option>
         </select>
       </label>
 
@@ -72,7 +80,7 @@ export function AutomatonProperties() {
           <select
             className="panel-select"
             value={automaton.acceptanceMode ?? 'finalState'}
-            onChange={(e) => setAcceptanceMode(e.target.value as PdaAcceptanceMode)}
+            onChange={(e) => setAcceptanceMode(e.target.value as AcceptanceMode)}
             data-testid="pda-acceptance-mode-select"
           >
             <option value="finalState">Final State</option>
@@ -94,6 +102,48 @@ export function AutomatonProperties() {
             <option value="peek">Peek</option>
           </select>
         </label>
+      )}
+
+      {automaton.type === AutomatonType.TM && (
+        <>
+          <label className="panel-field">
+            <span className="panel-label">TM Mode</span>
+            <select
+              className="panel-select"
+              value={automaton.tmMode ?? 'deterministic'}
+              onChange={(e) => setTmMode(e.target.value as TmMode)}
+              data-testid="tm-mode-select"
+            >
+              <option value="deterministic">Deterministic</option>
+              <option value="nondeterministic">Nondeterministic</option>
+            </select>
+          </label>
+          <label className="panel-field">
+            <span className="panel-label">Acceptance Mode</span>
+            <select
+              className="panel-select"
+              value={automaton.acceptanceMode ?? 'finalState'}
+              onChange={(e) => setAcceptanceMode(e.target.value as AcceptanceMode)}
+              data-testid="tm-acceptance-mode-select"
+            >
+              <option value="finalState">Final State</option>
+              <option value="haltOnAccept">Halt on Accept</option>
+            </select>
+          </label>
+          <label className="panel-field">
+            <span className="panel-label">Blank Symbol</span>
+            <input
+              type="text"
+              className="panel-input"
+              maxLength={4}
+              value={blankText}
+              onChange={(e) => setBlankText(e.target.value)}
+              onBlur={() => setTmBlankSymbol(blankText)}
+              onKeyDown={handleKeyDown}
+              data-testid="tm-blank-symbol-input"
+            />
+          </label>
+        </>
       )}
 
       <label className="panel-field">
