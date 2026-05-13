@@ -20,7 +20,18 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
+      const ctrl = e.ctrlKey || e.metaKey;
+      const simState = useSimulationStore.getState();
+      const tabStore = useTabStore.getState();
+
+      // Undo/redo work even when a sidebar input is focused
+      if (ctrl && !simState.isActive) {
+        const key = e.key.toLowerCase();
+        if (key === 'z') { e.preventDefault(); if (e.shiftKey) { redo(); } else { undo(); } return; }
+        if (key === 'y') { e.preventDefault(); redo(); return; }
+      }
+
+      // Don't trigger other shortcuts when typing in inputs
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -28,10 +39,6 @@ export function useKeyboardShortcuts() {
       ) {
         return;
       }
-
-      const ctrl = e.ctrlKey || e.metaKey;
-      const simState = useSimulationStore.getState();
-      const tabStore = useTabStore.getState();
 
       // Escape always works — exits simulation or clears selection
       if (e.key === 'Escape') {
@@ -107,18 +114,6 @@ export function useKeyboardShortcuts() {
         if (simState.isActive) return;
 
         switch (e.key.toLowerCase()) {
-          case 'z':
-            e.preventDefault();
-            if (e.shiftKey) {
-              redo();
-            } else {
-              undo();
-            }
-            return;
-          case 'y':
-            e.preventDefault();
-            redo();
-            return;
           case 's':
             e.preventDefault();
             saveToJsonFile(useAutomatonStore.getState().automaton);

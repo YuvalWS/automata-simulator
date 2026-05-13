@@ -1132,3 +1132,96 @@ describe('PDA: nondeterministic branching', () => {
     expect(lastSnap.configurations!.length).toBe(2);
   });
 });
+
+describe('PDA: peek mode', () => {
+  function makePeekPda(overrides: Partial<Automaton> = {}): Automaton {
+    return makeAutomaton({
+      type: AutomatonType.PDA,
+      alphabet: ['a'],
+      acceptanceMode: 'finalState',
+      pdaStackMode: 'peek',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      ...overrides,
+    });
+  }
+
+  it('nop: stack unchanged after peek', () => {
+    const pda = makePeekPda({
+      transitions: [
+        {
+          id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: [], peekAction: 'nop' }],
+        },
+      ],
+    });
+    const trace = buildSimulationTrace(pda, ['a']);
+    const lastSnap = last(trace.snapshots);
+    expect(lastSnap.status).toBe('accepted');
+    // Stack should still contain STACK_BOTTOM (nop = no change)
+    expect(lastSnap.configurations![0]!.stack).toEqual([STACK_BOTTOM]);
+  });
+
+  it('push: new symbols added on top, peeked symbol stays', () => {
+    const pda = makePeekPda({
+      transitions: [
+        {
+          id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: ['X'], peekAction: 'push' }],
+        },
+      ],
+    });
+    const trace = buildSimulationTrace(pda, ['a']);
+    const lastSnap = last(trace.snapshots);
+    expect(lastSnap.status).toBe('accepted');
+    // X pushed on top, STACK_BOTTOM stays beneath
+    expect(lastSnap.configurations![0]!.stack).toEqual(['X', STACK_BOTTOM]);
+  });
+
+  it('pop: peeked symbol consumed (same as pop mode)', () => {
+    const pda = makePeekPda({
+      transitions: [
+        {
+          id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: ['X'], peekAction: 'pop' }],
+        },
+      ],
+    });
+    const trace = buildSimulationTrace(pda, ['a']);
+    const lastSnap = last(trace.snapshots);
+    expect(lastSnap.status).toBe('accepted');
+    // STACK_BOTTOM consumed, X pushed
+    expect(lastSnap.configurations![0]!.stack).toEqual(['X']);
+  });
+
+  it('peek does not fire when top does not match', () => {
+    const pda = makePeekPda({
+      transitions: [
+        {
+          id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: 'Z', stackPush: [], peekAction: 'nop' }],
+        },
+      ],
+    });
+    // Stack top is STACK_BOTTOM, rule peeks for 'Z' — should not match
+    expect(lastStatus(pda, ['a'])).toBe('rejected');
+  });
+
+  it('peek mode defaults to pop behavior when peekAction is undefined', () => {
+    // When peekAction is missing in peek mode, simulator defaults to 'pop'
+    const pda = makePeekPda({
+      transitions: [
+        {
+          id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [],
+          pdaRules: [{ inputSymbol: 'a', stackPop: STACK_BOTTOM, stackPush: ['X'] }],
+        },
+      ],
+    });
+    const trace = buildSimulationTrace(pda, ['a']);
+    const lastSnap = last(trace.snapshots);
+    expect(lastSnap.status).toBe('accepted');
+    expect(lastSnap.configurations![0]!.stack).toEqual(['X']);
+  });
+});

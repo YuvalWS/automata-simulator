@@ -184,3 +184,52 @@
 .pda-add-rule:hover {
   background: var(--color-bg);
 }
+
+/* Condition + Action layout */
+.pda-rule-condition {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+  align-items: end;
+}
+
+.pda-rule-action {
+  margin-top: 6px;
+}
+
+.pda-field-push {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Peek mode action */
+.pda-action-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pda-action-radios {
+  display: flex;
+  gap: 12px;
+}
+
+.pda-action-radio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.pda-action-radio input[type='radio'] {
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.pda-push-input {
+  width: 100%;
+}

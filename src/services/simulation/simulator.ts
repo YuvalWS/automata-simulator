@@ -63,6 +63,7 @@ function configKey(config: PdaConfiguration): string {
 function pdaEpsilonClosure(
   automaton: Automaton,
   configs: PdaConfiguration[],
+  stackMode: 'pop' | 'peek' = 'pop',
 ): { configs: PdaConfiguration[]; transitionIds: string[] } {
   const visited = new Set<string>();
   const queue = [...configs];
@@ -83,7 +84,7 @@ function pdaEpsilonClosure(
       for (const rule of t.pdaRules) {
         if (rule.inputSymbol !== EPSILON) continue;
 
-        const newStack = applyStackOperation(config.stack, rule);
+        const newStack = applyStackOperation(config.stack, rule, stackMode);
         if (!newStack) continue;
 
         const newConfig: PdaConfiguration = { stateId: t.targetId, stack: newStack };
@@ -103,23 +104,36 @@ function pdaEpsilonClosure(
 /**
  * Apply a PDA rule's stack operation to a stack.
  * Returns the new stack, or null if the rule doesn't match (stackPop doesn't match top).
+ *
+ * stackMode 'pop' (default): stackPop symbol is consumed when matched.
+ * stackMode 'peek': stackPop symbol is only read; what happens next is driven by rule.peekAction:
+ *   'nop'  — stack unchanged
+ *   'push' — push stackPush on top, peeked symbol stays
+ *   'pop'  — pop peeked symbol (same as pop mode), then push stackPush
  */
-function applyStackOperation(stack: string[], rule: PdaRule): string[] | null {
-  const popSymbol = rule.stackPop;
+function applyStackOperation(stack: string[], rule: PdaRule, stackMode: 'pop' | 'peek' = 'pop'): string[] | null {
+  const matchSymbol = rule.stackPop;
 
-  if (popSymbol === EPSILON) {
-    // Don't pop anything, just push
+  if (stackMode === 'peek') {
+    if (matchSymbol !== EPSILON) {
+      if (stack.length === 0 || stack[0] !== matchSymbol) return null;
+    }
+    const action = rule.peekAction ?? 'pop';
+    if (action === 'nop') return [...stack];
+    if (action === 'push') return [...rule.stackPush, ...stack]; // peeked symbol stays
+    // action === 'pop': consume peeked symbol
+    if (matchSymbol === EPSILON) return [...rule.stackPush, ...stack]; // nothing to pop
+    return [...rule.stackPush, ...stack.slice(1)];
+  }
+
+  // Pop mode (default)
+  if (matchSymbol === EPSILON) {
     return [...rule.stackPush, ...stack];
   }
-
-  // Need to pop: check stack top matches
-  if (stack.length === 0 || stack[0] !== popSymbol) {
+  if (stack.length === 0 || stack[0] !== matchSymbol) {
     return null;
   }
-
-  // Pop the top, then push new symbols (first element of stackPush goes on top)
-  const remainingStack = stack.slice(1);
-  return [...rule.stackPush, ...remainingStack];
+  return [...rule.stackPush, ...stack.slice(1)];
 }
 
 function isPdaAccepted(
@@ -309,12 +323,13 @@ function buildPdaTrace(automaton: Automaton, word: string[]): SimulationTrace {
   }
 
   const snapshots: SimulationSnapshot[] = [];
+  const stackMode = automaton.pdaStackMode ?? 'pop';
 
   // Initialize with single configuration: initial state, stack = [STACK_BOTTOM]
-  let initConfigs: PdaConfiguration[] = [{ stateId: initialState.id, stack: [STACK_BOTTOM] }];
+  const initConfigs: PdaConfiguration[] = [{ stateId: initialState.id, stack: [STACK_BOTTOM] }];
 
   // Apply epsilon closure
-  const initClosure = pdaEpsilonClosure(automaton, initConfigs);
+  const initClosure = pdaEpsilonClosure(automaton, initConfigs, stackMode);
   let configs = initClosure.configs;
 
   // Step 0
@@ -352,7 +367,7 @@ function buildPdaTrace(automaton: Automaton, word: string[]): SimulationTrace {
         for (const rule of t.pdaRules) {
           if (rule.inputSymbol !== symbol) continue;
 
-          const newStack = applyStackOperation(config.stack, rule);
+          const newStack = applyStackOperation(config.stack, rule, stackMode);
           if (!newStack) continue;
 
           nextConfigs.push({ stateId: t.targetId, stack: newStack });
@@ -366,7 +381,7 @@ function buildPdaTrace(automaton: Automaton, word: string[]): SimulationTrace {
     }
 
     // Apply epsilon closure
-    const closure = pdaEpsilonClosure(automaton, nextConfigs);
+    const closure = pdaEpsilonClosure(automaton, nextConfigs, stackMode);
     configs = closure.configs;
     traversedIds.push(...closure.transitionIds);
 

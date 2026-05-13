@@ -51,7 +51,7 @@ export async function saveToJsonFile(automaton: Automaton): Promise<void> {
   saveAs(blob, `${automaton.name || 'automaton'}.json`);
 }
 
-export async function loadFromJsonFile(): Promise<{ automaton: Automaton; fileHandle?: any } | null> {
+export async function loadFromJsonFile(): Promise<{ automaton: Automaton; fileHandle?: FileSystemFileHandle } | null> {
   // Try File System Access API
   if (typeof win.showOpenFilePicker === 'function') {
     try {

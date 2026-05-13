@@ -23,6 +23,7 @@ const PdaRuleSchema = z.object({
   inputSymbol: z.string(),
   stackPop: z.string(),
   stackPush: z.array(z.string()),
+  peekAction: z.enum(['nop', 'push', 'pop']).optional(),
 });
 
 const TransitionSchema = z.object({
@@ -43,6 +44,7 @@ const AutomatonSchema = z.object({
   transitions: z.array(TransitionSchema),
   viewport: ViewportSchema,
   acceptanceMode: z.enum(['finalState', 'emptyStack']).optional(),
+  pdaStackMode: z.enum(['pop', 'peek']).optional(),
 });
 
 export const SaveFileSchema = z.object({

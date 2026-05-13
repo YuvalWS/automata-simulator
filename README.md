@@ -33,7 +33,8 @@ Test multiple words at once and instantly see which are accepted or rejected.
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA, NFA & PDA support** — toggle between deterministic, nondeterministic, and pushdown automata modes
 - **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
-- **PDA stack operations** — define transitions with input symbol, stack pop, and stack push; supports final-state and empty-stack acceptance modes with real-time stack visualization during simulation
+- **PDA stack operations** — define transitions with input symbol, stack pop/peek, and stack push; supports final-state and empty-stack acceptance modes with real-time stack visualization during simulation
+- **PDA stack mode** — choose between **Pop** (standard: stack top consumed on each transition) and **Peek** (stack top inspected without consuming; each rule picks one action: no-op, push, or pop)
 - **Textbook-quality diagrams** — double circles for accepting states, curved arrows, self-loops
 - **Smart self-loop placement** — self-loops automatically position away from connected edges and the initial arrow
 - **Smart edge routing** — fan-out edges from the same state are offset to avoid overlap
@@ -186,7 +187,7 @@ src/
 ├── hooks/         # Keyboard shortcuts, touch canvas, auto-save, unsaved warning, theme, viewport detection
 └── utils/         # Math, Bezier, ID generation, snap-to-alignment, random word, fit viewport
 tests/
-├── unit/          # 305 tests covering simulation, stores, serializers, edge-routing, touch, utils
+├── unit/          # 342 tests covering simulation, stores, serializers, edge-routing, touch, utils
 ```
 
 ## Auto-save

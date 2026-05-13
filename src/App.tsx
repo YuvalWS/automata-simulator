@@ -20,7 +20,7 @@ import { useEditorStore } from './stores/editor-store';
 import { useTabStore } from './stores/tab-store';
 
 if (import.meta.env.DEV) {
-  (window as any).__stores__ = {
+  (window as Window & typeof globalThis & Record<string, unknown>).__stores__ = {
     automatonStore: useAutomatonStore,
     editorStore: useEditorStore,
     simulationStore: useSimulationStore,

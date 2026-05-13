@@ -1,6 +1,6 @@
 import type { Point, Viewport } from './geometry';
 import { AutomatonType } from './types';
-import type { PdaAcceptanceMode } from './types';
+import type { PdaAcceptanceMode, PdaStackMode } from './types';
 import { generateId } from '@/utils/id';
 
 export interface AutomatonState {
@@ -15,6 +15,7 @@ export interface PdaRule {
   inputSymbol: string;
   stackPop: string;
   stackPush: string[];
+  peekAction?: 'nop' | 'push' | 'pop'; // only relevant when automaton.pdaStackMode === 'peek'
 }
 
 export interface Transition {
@@ -35,6 +36,7 @@ export interface Automaton {
   transitions: Transition[];
   viewport: Viewport;
   acceptanceMode?: PdaAcceptanceMode;
+  pdaStackMode?: PdaStackMode;
 }
 
 export function createEmptyAutomaton(name = 'Untitled'): Automaton {

@@ -23,13 +23,13 @@ export interface Tab {
 }
 
 // Per-tab file handles (not serializable, stored outside Zustand to avoid proxy issues)
-const fileHandles = new Map<string, any>();
+const fileHandles = new Map<string, FileSystemFileHandle>();
 
 interface TabStore {
   tabs: Tab[];
   activeTabId: string;
 
-  createTab: (automaton?: Automaton, fileHandle?: any) => string | null;
+  createTab: (automaton?: Automaton, fileHandle?: FileSystemFileHandle) => string | null;
   closeTab: (id: string) => void;
   switchTab: (id: string) => void;
   switchToNextTab: () => void;
@@ -182,13 +182,9 @@ export const useTabStore = create<TabStore>((set, get) => ({
     const { tabs, activeTabId } = get();
 
     // Check if the tab being closed is dirty
-    let isDirty = false;
-    if (id === activeTabId) {
-      isDirty = useEditorStore.getState().isDirty;
-    } else {
-      const tab = tabs.find((t) => t.id === id);
-      isDirty = tab?.snapshot?.editor.isDirty ?? false;
-    }
+    const isDirty = id === activeTabId
+      ? useEditorStore.getState().isDirty
+      : tabs.find((t) => t.id === id)?.snapshot?.editor.isDirty ?? false;
 
     if (isDirty) {
       const tabName = id === activeTabId
@@ -318,12 +314,12 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
 // --- File handle helpers (used by file-io.ts) ---
 
-export function getActiveTabFileHandle(): any | null {
+export function getActiveTabFileHandle(): FileSystemFileHandle | null {
   const { activeTabId } = useTabStore.getState();
   return fileHandles.get(activeTabId) ?? null;
 }
 
-export function setActiveTabFileHandle(handle: any): void {
+export function setActiveTabFileHandle(handle: FileSystemFileHandle): void {
   const { activeTabId } = useTabStore.getState();
   if (handle) {
     fileHandles.set(activeTabId, handle);

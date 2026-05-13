@@ -57,7 +57,7 @@ test.describe('Pan and Zoom', () => {
     expect(automaton.viewport.zoom).not.toBe(1);
   });
 
-  test('dragging empty canvas pans the view', async ({ page }) => {
+  test('dragging empty canvas pans the view', async () => {
     const automaton = await builder.getAutomaton();
     const originalPanX = automaton.viewport.panX;
     const originalPanY = automaton.viewport.panY;
