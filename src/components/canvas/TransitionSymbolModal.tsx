@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { DEFAULT_BLANK_SYMBOL, EPSILON, normalizeEpsilon } from '@/models/epsilon';
+import { DEFAULT_BLANK_SYMBOL, EPSILON, normalizeEpsilon, toDisplayBlank, fromDisplayBlank } from '@/models/epsilon';
 import { AutomatonType } from '@/models/types';
 import type { PdaStackMode, TmDirection } from '@/models/types';
 import { useViewport } from '@/hooks/use-viewport';
@@ -59,14 +59,14 @@ interface TmRuleDraft {
   direction: TmDirection;
 }
 
-function createEmptyTmDraft(blank: string): TmRuleDraft {
-  return { readSymbolsText: blank, writeSymbol: '', direction: 'R' };
+function createEmptyTmDraft(displayBlank: string): TmRuleDraft {
+  return { readSymbolsText: displayBlank, writeSymbol: '', direction: 'R' };
 }
 
-function tmRuleToDraft(rule: TmRule): TmRuleDraft {
+function tmRuleToDraft(rule: TmRule, displayBlank: string | undefined): TmRuleDraft {
   return {
-    readSymbolsText: rule.readSymbols.join(', '),
-    writeSymbol: rule.writeSymbol ?? '',
+    readSymbolsText: toDisplayBlank(rule.readSymbols.join(', '), displayBlank),
+    writeSymbol: rule.writeSymbol ? toDisplayBlank(rule.writeSymbol, displayBlank) : '',
     direction: rule.direction,
   };
 }
@@ -95,9 +95,10 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
   );
 
   // TM state — keeps the raw read-symbols text per rule for free-form typing.
+  // The text uses the user's display blank; on submit we canonicalize back to DEFAULT_BLANK_SYMBOL.
   const [tmRules, setTmRules] = useState<TmRuleDraft[]>(
     initialTmRules && initialTmRules.length > 0
-      ? initialTmRules.map(tmRuleToDraft)
+      ? initialTmRules.map((r) => tmRuleToDraft(r, blank))
       : [createEmptyTmDraft(blank)],
   );
 
@@ -136,10 +137,11 @@ export function TransitionSymbolModal({ position, initialSymbols, initialPdaRule
   const handleTmSubmit = () => {
     const parsed: TmRule[] = tmRules
       .map((draft) => {
-        const reads = parseReadSymbols(draft.readSymbolsText);
+        const reads = parseReadSymbols(draft.readSymbolsText)
+          .map((s) => fromDisplayBlank(s, blank));
         if (reads.length === 0) return null;
         const rule: TmRule = { readSymbols: reads, direction: draft.direction };
-        if (draft.writeSymbol.length > 0) rule.writeSymbol = draft.writeSymbol;
+        if (draft.writeSymbol.length > 0) rule.writeSymbol = fromDisplayBlank(draft.writeSymbol, blank);
         return rule;
       })
       .filter((r): r is TmRule => r !== null);

@@ -494,9 +494,9 @@ function buildTmTrace(automaton: Automaton, word: string[]): SimulationTrace {
     };
   }
 
-  const blank = automaton.tmBlankSymbol && automaton.tmBlankSymbol.length > 0
-    ? automaton.tmBlankSymbol
-    : DEFAULT_BLANK_SYMBOL;
+  // Blank is always the canonical DEFAULT_BLANK_SYMBOL internally; automaton.tmBlankSymbol
+  // is a display-only preference applied at the UI boundary.
+  const blank = DEFAULT_BLANK_SYMBOL;
   const acceptMode = automaton.acceptanceMode === 'haltOnAccept' ? 'haltOnAccept' : 'finalState';
 
   const initialTape = word.length > 0 ? [...word] : [blank];

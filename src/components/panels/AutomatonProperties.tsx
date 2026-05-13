@@ -68,10 +68,10 @@ export function AutomatonProperties() {
           onChange={(e) => setType(e.target.value as AutomatonType)}
           data-testid="automaton-type-select"
         >
-          <option value={AutomatonType.DFA}>DFA</option>
-          <option value={AutomatonType.NFA}>NFA</option>
-          <option value={AutomatonType.PDA}>PDA</option>
-          <option value={AutomatonType.TM}>TM</option>
+          <option value={AutomatonType.DFA}>DFA — Deterministic Finite Automaton</option>
+          <option value={AutomatonType.NFA}>NFA — Nondeterministic Finite Automaton</option>
+          <option value={AutomatonType.PDA}>PDA — Pushdown Automaton</option>
+          <option value={AutomatonType.TM}>TM — Turing Machine</option>
         </select>
       </label>
 

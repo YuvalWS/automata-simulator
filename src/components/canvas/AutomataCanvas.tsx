@@ -796,7 +796,7 @@ export function AutomataCanvas() {
     return 'active';
   };
 
-  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions, automaton.type);
+  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions, automaton.type, automaton.tmBlankSymbol);
   const initialState = automaton.states.find((s) => s.isInitial);
   const drawingSource = drawingTransition
     ? automaton.states.find((s) => s.id === drawingTransition.sourceId)
@@ -896,6 +896,7 @@ export function AutomataCanvas() {
                 edgePath={ep}
                 transition={transition}
                 automatonType={automaton.type}
+                tmBlankSymbol={automaton.tmBlankSymbol}
                 isSelected={isSelected('transition', ep.transitionId)}
                 isSimActive={isSimActiveTransition}
                 onClick={handleTransitionClick}

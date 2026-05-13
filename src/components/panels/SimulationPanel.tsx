@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
-import { DEFAULT_BLANK_SYMBOL } from '@/models/epsilon';
+import { DEFAULT_BLANK_SYMBOL, toDisplayBlank } from '@/models/epsilon';
 import { generateRandomWord } from '@/utils/random-word';
 import './SimulationPanel.css';
 
@@ -283,8 +283,8 @@ export function SimulationPanel() {
                     const cells: { sym: string; isHead: boolean }[] = [];
                     for (let off = -half; off <= half; off++) {
                       const idx = cfg.headIndex + off;
-                      const sym = idx >= 0 && idx < cfg.tape.length ? cfg.tape[idx]! : blank;
-                      cells.push({ sym, isHead: off === 0 });
+                      const rawSym = idx >= 0 && idx < cfg.tape.length ? cfg.tape[idx]! : DEFAULT_BLANK_SYMBOL;
+                      cells.push({ sym: toDisplayBlank(rawSym, blank), isHead: off === 0 });
                     }
                     return (
                       <div key={i} className="sim-tm-config">
