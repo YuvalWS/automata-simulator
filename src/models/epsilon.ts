@@ -2,6 +2,13 @@ export const EPSILON = '\u03B5';
 export const STACK_BOTTOM = 'Z\u2080';
 export const DEFAULT_BLANK_SYMBOL = '⊔'; // ⊔ (U+2294, LaTeX \sqcup)
 
+export const BLANK_DISPLAY_OPTIONS = ['_', '⊔', 'Δ'] as const;
+export type BlankDisplayOption = (typeof BLANK_DISPLAY_OPTIONS)[number];
+
+export function isBlankDisplayOption(s: string): s is BlankDisplayOption {
+  return (BLANK_DISPLAY_OPTIONS as readonly string[]).includes(s);
+}
+
 export function isEpsilon(symbol: string): boolean {
   return symbol === EPSILON;
 }

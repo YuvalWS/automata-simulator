@@ -20,7 +20,7 @@ test.describe('TM Support', () => {
     await page.locator(SEL.automatonTypeSelect).selectOption('TM');
     await expect(page.locator(SEL.tmModeSelect)).toBeVisible();
     await expect(page.locator(SEL.tmAcceptanceModeSelect)).toBeVisible();
-    await expect(page.locator(SEL.tmBlankSymbolInput)).toBeVisible();
+    await expect(page.locator(SEL.tmBlankSymbolSelect)).toBeVisible();
   });
 
   test('switching away from TM hides TM controls', async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe('TM Support', () => {
     await page.locator(SEL.automatonTypeSelect).selectOption('DFA');
     await expect(page.locator(SEL.tmModeSelect)).not.toBeVisible();
     await expect(page.locator(SEL.tmAcceptanceModeSelect)).not.toBeVisible();
-    await expect(page.locator(SEL.tmBlankSymbolInput)).not.toBeVisible();
+    await expect(page.locator(SEL.tmBlankSymbolSelect)).not.toBeVisible();
   });
 
   test('TM simulation accepts "0"', async ({ page }) => {
@@ -103,6 +103,25 @@ test.describe('TM Support', () => {
       const count = (await builder.getAutomaton()).states.length;
       expect(count).toBe(before);
     }
+  });
+
+  test('blank-symbol dropdown offers _, ⊔, Δ and persists selection across reload', async ({ page }) => {
+    await page.locator(SEL.automatonTypeSelect).selectOption('TM');
+    const blankSelect = page.locator(SEL.tmBlankSymbolSelect);
+    await expect(blankSelect.locator('option')).toHaveCount(3);
+    await expect(blankSelect.locator('option[value="_"]')).toBeAttached();
+    await expect(blankSelect.locator('option[value="⊔"]')).toBeAttached();
+    await expect(blankSelect.locator('option[value="Δ"]')).toBeAttached();
+
+    await blankSelect.selectOption('_');
+    await page.waitForTimeout(50);
+    const stored = await page.evaluate(() => localStorage.getItem('automata-tm-blank-display'));
+    expect(stored).toBe('_');
+
+    await page.reload();
+    await page.waitForSelector(SEL.canvas);
+    await page.locator(SEL.automatonTypeSelect).selectOption('TM');
+    await expect(page.locator(SEL.tmBlankSymbolSelect)).toHaveValue('_');
   });
 
   test('infinite loop TM shows timeout', async ({ page }) => {

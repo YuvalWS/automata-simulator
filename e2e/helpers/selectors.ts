@@ -41,7 +41,7 @@ export const SEL = {
   // TM properties
   tmModeSelect: '[data-testid="tm-mode-select"]',
   tmAcceptanceModeSelect: '[data-testid="tm-acceptance-mode-select"]',
-  tmBlankSymbolInput: '[data-testid="tm-blank-symbol-input"]',
+  tmBlankSymbolSelect: '[data-testid="tm-blank-symbol-select"]',
 
   // Toolbar buttons
   toolbarNewState: '.toolbar-new-state',

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
 import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
-import { DEFAULT_BLANK_SYMBOL } from '@/models/epsilon';
+import { DEFAULT_BLANK_SYMBOL, BLANK_DISPLAY_OPTIONS, isBlankDisplayOption } from '@/models/epsilon';
+
+const TM_BLANK_DISPLAY_KEY = 'automata-tm-blank-display';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
@@ -15,11 +17,17 @@ export function AutomatonProperties() {
   const setTmBlankSymbol = useAutomatonStore((s) => s.setTmBlankSymbol);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
-  const [blankText, setBlankText] = useState(automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL);
+
+  const currentBlank = automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL;
+  const blankValue = isBlankDisplayOption(currentBlank) ? currentBlank : DEFAULT_BLANK_SYMBOL;
 
   useEffect(() => {
-    setBlankText(automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL);
-  }, [automaton.tmBlankSymbol, automaton.id]);
+    if (automaton.type !== AutomatonType.TM) return;
+    const stored = localStorage.getItem(TM_BLANK_DISPLAY_KEY);
+    if (stored && isBlankDisplayOption(stored) && stored !== currentBlank) {
+      setTmBlankSymbol(stored);
+    }
+  }, [automaton.type, currentBlank, setTmBlankSymbol]);
 
   useEffect(() => {
     setLocalName(automaton.name);
@@ -133,16 +141,20 @@ export function AutomatonProperties() {
           </label>
           <label className="panel-field">
             <span className="panel-label">Blank Symbol</span>
-            <input
-              type="text"
-              className="panel-input"
-              maxLength={4}
-              value={blankText}
-              onChange={(e) => setBlankText(e.target.value)}
-              onBlur={() => setTmBlankSymbol(blankText)}
-              onKeyDown={handleKeyDown}
-              data-testid="tm-blank-symbol-input"
-            />
+            <select
+              className="panel-select"
+              value={blankValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                localStorage.setItem(TM_BLANK_DISPLAY_KEY, v);
+                setTmBlankSymbol(v);
+              }}
+              data-testid="tm-blank-symbol-select"
+            >
+              {BLANK_DISPLAY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </label>
         </>
       )}
