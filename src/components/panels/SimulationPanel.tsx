@@ -1,10 +1,31 @@
 import { useCallback } from 'react';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
+import type { BatchResult } from '@/stores/simulation-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
 import { DEFAULT_BLANK_SYMBOL, toDisplayBlank } from '@/models/epsilon';
 import { generateRandomWord } from '@/utils/random-word';
 import './SimulationPanel.css';
+
+function trimTape(tape: string[], blank: string): string[] {
+  let start = 0;
+  while (start < tape.length && tape[start] === blank) start++;
+  let end = tape.length - 1;
+  while (end >= start && tape[end] === blank) end--;
+  return tape.slice(start, end + 1);
+}
+
+function BatchTapeDisplay({ result, blank }: { result: BatchResult; blank: string }) {
+  if (result.finalTape === undefined) return null;
+  const trimmed = trimTape(result.finalTape, blank);
+  const display = trimmed.length > 0 ? trimmed.join(' ') : blank;
+  return (
+    <div className="sim-batch-tape">
+      <span className="sim-batch-tape-label">tape:</span>
+      <span className="sim-batch-tape-content">{display}</span>
+    </div>
+  );
+}
 
 export function SimulationPanel() {
   const wordInput = useSimulationStore((s) => s.wordInput);
@@ -189,10 +210,13 @@ export function SimulationPanel() {
           <div className="sim-batch-results">
             {batchResults.map((result, i) => (
               <div key={i} className={`sim-batch-row sim-batch-row-${result.status}`}>
-                <span className="sim-batch-word">{result.wordDisplay}</span>
-                <span className={`sim-batch-badge sim-batch-badge-${result.status}`}>
-                  {result.status === 'accepted' ? '\u2714' : '\u2716'}
-                </span>
+                <div className="sim-batch-main">
+                  <span className="sim-batch-word">{result.wordDisplay}</span>
+                  <span className={`sim-batch-badge sim-batch-badge-${result.status}`}>
+                    {result.status === 'accepted' ? '\u2714' : '\u2716'}
+                  </span>
+                </div>
+                <BatchTapeDisplay result={result} blank={blank} />
               </div>
             ))}
           </div>

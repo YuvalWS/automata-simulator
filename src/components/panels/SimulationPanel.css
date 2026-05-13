@@ -376,11 +376,38 @@
 
 .sim-batch-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.sim-batch-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sim-batch-tape {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-top: 2px;
+  font-size: 0.78rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.sim-batch-tape-label {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sim-batch-tape-content {
   font-family: var(--font-mono);
 }
 

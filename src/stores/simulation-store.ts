@@ -10,6 +10,7 @@ export interface BatchResult {
   word: string[];
   wordDisplay: string;
   status: 'accepted' | 'rejected';
+  finalTape?: string[]; // TM only: tape array from the last snapshot's first configuration
 }
 
 interface SimulationStore {
@@ -204,10 +205,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       const word = parseWord(line);
       const trace = buildSimulationTrace(automaton, word);
       const lastSnap = trace.snapshots[trace.snapshots.length - 1];
+      const finalTape = lastSnap?.tmConfigurations?.[0]?.tape;
       return {
         word,
         wordDisplay: word.length === 0 ? '\u03B5' : word.join(''),
         status: lastSnap?.status === 'accepted' ? 'accepted' : 'rejected',
+        ...(finalTape !== undefined ? { finalTape } : {}),
       };
     });
 

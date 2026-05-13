@@ -124,6 +124,21 @@ test.describe('TM Support', () => {
     await expect(page.locator(SEL.tmBlankSymbolSelect)).toHaveValue('_');
   });
 
+  test('TM batch mode shows final tape output', async ({ page }) => {
+    await builder.loadSimpleTM();
+    await page.waitForTimeout(100);
+
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator('.sim-mode-btn', { hasText: 'Batch' }).click();
+    await page.locator(SEL.simBatchInput).fill('0');
+    await page.locator(SEL.simRunBtn).click();
+    await page.waitForTimeout(200);
+
+    // Simple TM writes '0' → '1', then reads blank. Final tape after trimming: '1'
+    await expect(page.locator('.sim-batch-tape-content')).toBeVisible();
+    await expect(page.locator('.sim-batch-tape-content')).toHaveText('1');
+  });
+
   test('infinite loop TM shows timeout', async ({ page }) => {
     await builder.loadInfiniteLoopTM();
     await page.waitForTimeout(100);
