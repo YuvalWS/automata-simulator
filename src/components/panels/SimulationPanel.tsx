@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useSimulationStore, getCurrentSnapshot } from '@/stores/simulation-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
+import { DEFAULT_BLANK_SYMBOL } from '@/models/epsilon';
 import { generateRandomWord } from '@/utils/random-word';
 import './SimulationPanel.css';
 
@@ -39,7 +40,7 @@ export function SimulationPanel() {
   const isTM = automaton.type === AutomatonType.TM;
   const blank = automaton.tmBlankSymbol && automaton.tmBlankSymbol.length > 0
     ? automaton.tmBlankSymbol
-    : '_';
+    : DEFAULT_BLANK_SYMBOL;
 
   const handleAction = useCallback(
     (key: string) => {

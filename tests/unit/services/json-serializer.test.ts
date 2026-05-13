@@ -290,14 +290,14 @@ describe('JSON serializer', () => {
         ],
         viewport: { panX: 0, panY: 0, zoom: 1 },
         tmMode: 'nondeterministic',
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'haltOnAccept',
       };
       const json = serializeToJson(tm);
       const restored = deserializeFromJson(json);
       expect(restored.type).toBe('TM');
       expect(restored.tmMode).toBe('nondeterministic');
-      expect(restored.tmBlankSymbol).toBe('_');
+      expect(restored.tmBlankSymbol).toBe('⊔');
       expect(restored.acceptanceMode).toBe('haltOnAccept');
       expect(restored.transitions[0]!.tmRules).toEqual([
         { readSymbols: ['0', '1'], writeSymbol: 'X', direction: 'R' },
@@ -333,7 +333,7 @@ describe('JSON serializer', () => {
           ],
           viewport: { panX: 0, panY: 0, zoom: 1 },
           tmMode: 'deterministic',
-          tmBlankSymbol: '_',
+          tmBlankSymbol: '⊔',
           acceptanceMode: 'finalState',
         },
       });

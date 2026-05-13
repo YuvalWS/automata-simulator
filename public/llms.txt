@@ -34,7 +34,7 @@ The app saves and loads automata as JSON files. You can generate these files pro
     "acceptanceMode": "finalState" | "emptyStack" | "haltOnAccept",
     "pdaStackMode": "pop" | "peek",
     "tmMode": "deterministic" | "nondeterministic",
-    "tmBlankSymbol": "_"
+    "tmBlankSymbol": "⊔"
   }
 }
 ```
@@ -133,11 +133,11 @@ The app saves and loads automata as JSON files. You can generate these files pro
       { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": [],
         "tmRules": [{ "readSymbols": ["0"], "writeSymbol": "1", "direction": "R" }] },
       { "id": "t1", "sourceId": "s1", "targetId": "s2", "symbols": [],
-        "tmRules": [{ "readSymbols": ["_"], "direction": "S" }] }
+        "tmRules": [{ "readSymbols": ["⊔"], "direction": "S" }] }
     ],
     "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
     "tmMode": "deterministic",
-    "tmBlankSymbol": "_",
+    "tmBlankSymbol": "⊔",
     "acceptanceMode": "finalState"
   }
 }

@@ -94,7 +94,7 @@ export class AutomatonBuilder {
   /**
    * Load a simple deterministic TM:
    * q0 reads '0', writes '1', moves R, → q1.
-   * q1 reads '_' (blank), stays, → q2 (accepting).
+   * q1 reads '⊔' (blank), stays, → q2 (accepting).
    * Accepts the single-symbol word '0'.
    */
   async loadSimpleTM() {
@@ -106,7 +106,7 @@ export class AutomatonBuilder {
       store.setType('TM');
       store.setAcceptanceMode('finalState');
       store.setTmMode('deterministic');
-      store.setTmBlankSymbol('_');
+      store.setTmBlankSymbol('⊔');
       const automaton = stores.automatonStore.getState().automaton;
       const q0 = automaton.states[0];
       const q1 = store.addState({ x: 350, y: 250 });
@@ -117,7 +117,7 @@ export class AutomatonBuilder {
         { readSymbols: ['0'], writeSymbol: '1', direction: 'R' },
       ]);
       store.addTransition(q1.id, q2.id, [], undefined, [
-        { readSymbols: ['_'], direction: 'S' },
+        { readSymbols: ['⊔'], direction: 'S' },
       ]);
     });
   }
@@ -132,11 +132,11 @@ export class AutomatonBuilder {
       const store = stores.automatonStore.getState();
       store.newAutomaton('Loop TM');
       store.setType('TM');
-      store.setTmBlankSymbol('_');
+      store.setTmBlankSymbol('⊔');
       const automaton = stores.automatonStore.getState().automaton;
       const q0 = automaton.states[0];
       store.addTransition(q0.id, q0.id, [], undefined, [
-        { readSymbols: ['a', '_'], direction: 'R' },
+        { readSymbols: ['a', '⊔'], direction: 'R' },
       ]);
     });
   }
@@ -151,7 +151,7 @@ export class AutomatonBuilder {
       const store = stores.automatonStore.getState();
       store.newAutomaton('Multi-read TM');
       store.setType('TM');
-      store.setTmBlankSymbol('_');
+      store.setTmBlankSymbol('⊔');
       const automaton = stores.automatonStore.getState().automaton;
       const q0 = automaton.states[0];
       const q1 = store.addState({ x: 350, y: 250 });

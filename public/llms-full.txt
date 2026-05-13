@@ -97,7 +97,7 @@ const SaveFileSchema = z.object({
 | acceptanceMode | `"finalState"` / `"emptyStack"` / `"haltOnAccept"` (optional) | PDA: `finalState`/`emptyStack`. TM: `finalState`/`haltOnAccept`. |
 | pdaStackMode | `"pop"` / `"peek"` (optional) | PDA only — `pop` consumes the matched stack symbol; `peek` inspects without consuming |
 | tmMode | `"deterministic"` / `"nondeterministic"` (optional) | TM only — DTM disallows duplicate rules per `(state, readSymbol)` |
-| tmBlankSymbol | string (optional) | TM only — symbol that fills unbounded cells on both sides of the tape (default `"_"`) |
+| tmBlankSymbol | string (optional) | TM only — symbol that fills unbounded cells on both sides of the tape (default `"⊔"`) |
 
 ### State
 | Field | Type | Description |
@@ -319,11 +319,11 @@ When generating automata for visual display:
       { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": [],
         "tmRules": [{ "readSymbols": ["0"], "writeSymbol": "1", "direction": "R" }] },
       { "id": "t1", "sourceId": "s1", "targetId": "s2", "symbols": [],
-        "tmRules": [{ "readSymbols": ["_"], "direction": "S" }] }
+        "tmRules": [{ "readSymbols": ["⊔"], "direction": "S" }] }
     ],
     "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
     "tmMode": "deterministic",
-    "tmBlankSymbol": "_",
+    "tmBlankSymbol": "⊔",
     "acceptanceMode": "finalState"
   }
 }

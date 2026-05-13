@@ -1,6 +1,6 @@
 export const EPSILON = '\u03B5';
 export const STACK_BOTTOM = 'Z\u2080';
-export const DEFAULT_BLANK_SYMBOL = '_';
+export const DEFAULT_BLANK_SYMBOL = '⊔'; // ⊔ (U+2294, LaTeX \sqcup)
 
 export function isEpsilon(symbol: string): boolean {
   return symbol === EPSILON;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
 import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
+import { DEFAULT_BLANK_SYMBOL } from '@/models/epsilon';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
@@ -14,10 +15,10 @@ export function AutomatonProperties() {
   const setTmBlankSymbol = useAutomatonStore((s) => s.setTmBlankSymbol);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
-  const [blankText, setBlankText] = useState(automaton.tmBlankSymbol ?? '_');
+  const [blankText, setBlankText] = useState(automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL);
 
   useEffect(() => {
-    setBlankText(automaton.tmBlankSymbol ?? '_');
+    setBlankText(automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL);
   }, [automaton.tmBlankSymbol, automaton.id]);
 
   useEffect(() => {

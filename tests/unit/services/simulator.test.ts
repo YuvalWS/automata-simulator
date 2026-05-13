@@ -1238,12 +1238,12 @@ function makeTmRule(reads: string | string[], writeSymbol: string | undefined, d
 
 describe('TM simulation', () => {
   describe('DTM: simple accept on final state', () => {
-    // q0 reads '0', writes '1', moves R, to q1; q1 reads '_', S, to q2 (accepting)
+    // q0 reads '0', writes '1', moves R, to q1; q1 reads '⊔', S, to q2 (accepting)
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       alphabet: ['0', '1'],
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       states: [
         { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1252,7 +1252,7 @@ describe('TM simulation', () => {
       ],
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [makeTmRule('0', '1', 'R')] },
-        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [], tmRules: [makeTmRule('_', '_', 'S')] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
       ],
     });
 
@@ -1260,7 +1260,7 @@ describe('TM simulation', () => {
       const trace = buildSimulationTrace(tm, ['0']);
       const lastSnap = last(trace.snapshots);
       expect(lastSnap.status).toBe('accepted');
-      // The tape after q0 step: ['1', '_'] (R appended blank); after q1 step: tape unchanged.
+      // The tape after q0 step: ['1', '⊔'] (R appended blank); after q1 step: tape unchanged.
       expect(lastSnap.tmConfigurations![0]!.tape[0]).toBe('1');
     });
 
@@ -1286,7 +1286,7 @@ describe('TM simulation', () => {
       type: AutomatonType.TM,
       alphabet: ['0', '1'],
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       states: [
         { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1311,7 +1311,7 @@ describe('TM simulation', () => {
         // q3: walk through Ys
         { id: 't7', sourceId: 'q3', targetId: 'q3', symbols: [], tmRules: [makeTmRule('Y', 'Y', 'R')] },
         // q3: blank → accept
-        { id: 't8', sourceId: 'q3', targetId: 'qf', symbols: [], tmRules: [makeTmRule('_', '_', 'S')] },
+        { id: 't8', sourceId: 'q3', targetId: 'qf', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
       ],
     });
 
@@ -1342,7 +1342,7 @@ describe('TM simulation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'nondeterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       states: [
         { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1373,7 +1373,7 @@ describe('TM simulation', () => {
     // q0 has no rules from non-accepting state → halts.
     const noRules = makeAutomaton({
       type: AutomatonType.TM,
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       states: [
         { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
       ],
@@ -1398,15 +1398,15 @@ describe('TM simulation', () => {
       // Infinite loop: q0 reads any symbol, writes blank, R, stays in q0.
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
         ],
         transitions: [
           { id: 't1', sourceId: 'q0', targetId: 'q0', symbols: [], tmRules: [
-            makeTmRule('a', '_', 'R'),
-            makeTmRule('_', '_', 'R'),
+            makeTmRule('a', '⊔', 'R'),
+            makeTmRule('⊔', '⊔', 'R'),
           ]},
         ],
       });
@@ -1419,7 +1419,7 @@ describe('TM simulation', () => {
     it('grows the tape to the left when head moves below index 0', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1433,7 +1433,7 @@ describe('TM simulation', () => {
       const trace = buildSimulationTrace(tm, ['a']);
       const lastSnap = last(trace.snapshots);
       const cfg = lastSnap.tmConfigurations![0]!;
-      expect(cfg.tape[0]).toBe('_');
+      expect(cfg.tape[0]).toBe('⊔');
       expect(cfg.tape[1]).toBe('a');
       expect(cfg.headIndex).toBe(0);
       expect(cfg.leftmostIndex).toBe(-1);
@@ -1442,7 +1442,7 @@ describe('TM simulation', () => {
     it('grows the tape to the right when head moves past the end', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1454,7 +1454,7 @@ describe('TM simulation', () => {
       });
       const trace = buildSimulationTrace(tm, ['a']);
       const cfg = last(trace.snapshots).tmConfigurations![0]!;
-      expect(cfg.tape).toEqual(['a', '_']);
+      expect(cfg.tape).toEqual(['a', '⊔']);
       expect(cfg.headIndex).toBe(1);
     });
   });
@@ -1463,26 +1463,26 @@ describe('TM simulation', () => {
     it('empty word: tape is a single blank cell', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
           { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
         ],
         transitions: [
-          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('_', '_', 'S')] },
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
         ],
       });
       const trace = buildSimulationTrace(tm, []);
       const lastSnap = last(trace.snapshots);
       expect(lastSnap.status).toBe('accepted');
-      expect(lastSnap.tmConfigurations![0]!.tape).toEqual(['_']);
+      expect(lastSnap.tmConfigurations![0]!.tape).toEqual(['⊔']);
     });
 
     it('no initial state: single rejected snapshot', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         states: [],
         transitions: [],
       });
@@ -1494,7 +1494,7 @@ describe('TM simulation', () => {
     it('stay direction (S): head does not move, state changes', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1517,7 +1517,7 @@ describe('TM simulation', () => {
       return {
         ...makeAutomaton({
           type: AutomatonType.TM,
-          tmBlankSymbol: '_',
+          tmBlankSymbol: '⊔',
           acceptanceMode: 'finalState',
           states: [
             { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1552,7 +1552,7 @@ describe('TM simulation', () => {
     it('rule with writeSymbol=undefined leaves the head cell unchanged', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
@@ -1572,7 +1572,7 @@ describe('TM simulation', () => {
     it('rule with writeSymbol="" (empty string) also leaves the head cell unchanged', () => {
       const tm = makeAutomaton({
         type: AutomatonType.TM,
-        tmBlankSymbol: '_',
+        tmBlankSymbol: '⊔',
         acceptanceMode: 'finalState',
         states: [
           { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },

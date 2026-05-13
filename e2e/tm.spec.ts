@@ -57,8 +57,8 @@ test.describe('TM Support', () => {
     const label = page.locator(`${SEL.canvas} text`, { hasText: '0 → 1, R' });
     await expect(label).toBeVisible();
 
-    // The second edge has no write (no-op shorthand) → "_ → S".
-    const noWriteLabel = page.locator(`${SEL.canvas} text`, { hasText: '_ → S' });
+    // The second edge has no write (no-op shorthand) → "⊔ → S".
+    const noWriteLabel = page.locator(`${SEL.canvas} text`, { hasText: '⊔ → S' });
     await expect(noWriteLabel).toBeVisible();
   });
 
@@ -88,7 +88,7 @@ test.describe('TM Support', () => {
     const automaton = await builder.getAutomaton();
     expect(automaton.type).toBe('TM');
     expect(automaton.tmMode).toBe('deterministic');
-    expect(automaton.tmBlankSymbol).toBe('_');
+    expect(automaton.tmBlankSymbol).toBe('⊔');
     expect(automaton.transitions.some((t: any) => t.tmRules && t.tmRules.length > 0)).toBe(true);
   });
 

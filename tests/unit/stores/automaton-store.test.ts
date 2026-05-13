@@ -208,7 +208,7 @@ describe('automaton store', () => {
       expect(automaton.type).toBe(AutomatonType.TM);
       expect(automaton.acceptanceMode).toBe('finalState');
       expect(automaton.tmMode).toBe('deterministic');
-      expect(automaton.tmBlankSymbol).toBe('_');
+      expect(automaton.tmBlankSymbol).toBe('⊔');
     });
 
     it('switching away from TM strips tmRules and clears TM fields', () => {

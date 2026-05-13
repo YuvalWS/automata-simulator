@@ -312,7 +312,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
@@ -329,7 +329,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'nondeterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
@@ -344,7 +344,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
@@ -358,7 +358,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'haltOnAccept',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
@@ -372,7 +372,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       states: [
         { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: false, isAccepting: false },
@@ -387,7 +387,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
@@ -408,7 +408,7 @@ describe('PDA validation', () => {
     const tm = makeAutomaton({
       type: AutomatonType.TM,
       tmMode: 'deterministic',
-      tmBlankSymbol: '_',
+      tmBlankSymbol: '⊔',
       acceptanceMode: 'finalState',
       transitions: [
         { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
