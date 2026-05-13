@@ -10,6 +10,9 @@ const LABEL_HEIGHT = 18;
 const LABEL_CHAR_WIDTH = 9;
 const LABEL_PADDING = 8;
 const LABEL_GAP = 4;
+const OBSTACLE_CLEARANCE = 18;
+const OBSTACLE_MAX_OFFSET = 220;
+const OBSTACLE_T_MARGIN = 0.05;
 
 export interface EdgePath {
   transitionId: string;
@@ -143,6 +146,67 @@ function bestSelfLoopAngle(
   return bestMid;
 }
 
+/**
+ * For an edge from `source` to `target`, returns a signed perpendicular offset (in the
+ * canonical perp direction used by computeEdge) needed so the quadratic Bézier arcs around
+ * any other states whose centers sit inside the chord's corridor. Returns 0 when nothing
+ * blocks the chord.
+ *
+ * Math: a quadratic Bézier with control point offset D perpendicular to the chord bulges
+ * by 2·t·(1−t)·D at parameter t. For an obstacle projected to parameter t with signed perp
+ * distance d (relative to the same perp basis), clearing it on the +perp side needs
+ * D ≥ (d + R + C) / (2·t·(1−t)); on the −perp side, D ≤ (d − R − C) / (2·t·(1−t)).
+ */
+export function obstacleAvoidanceOffset(
+  source: AutomatonState,
+  target: AutomatonState,
+  states: AutomatonState[],
+): number {
+  // Use the same canonical orientation as computeEdge so the returned sign composes with
+  // bidirectional/fan offsets in the same perp basis.
+  const canonicalSource = source.id < target.id ? source : target;
+  const canonicalTarget = source.id < target.id ? target : source;
+  const dx = canonicalTarget.position.x - canonicalSource.position.x;
+  const dy = canonicalTarget.position.y - canonicalSource.position.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return 0;
+  const len = Math.sqrt(lenSq);
+  const ux = dx / len;
+  const uy = dy / len;
+  // perp = perpendicular(canonDir) = (-uy, ux)
+  const px = -uy;
+  const py = ux;
+
+  let posReq = 0; // max over obstacles on the +perp side
+  let negReq = 0; // min over obstacles on the −perp side
+  const clearance = STATE_RADIUS + OBSTACLE_CLEARANCE;
+
+  for (const s of states) {
+    if (s.id === source.id || s.id === target.id) continue;
+    const rx = s.position.x - canonicalSource.position.x;
+    const ry = s.position.y - canonicalSource.position.y;
+    const along = rx * ux + ry * uy; // [0, len] when projected inside the chord
+    const t = along / len;
+    if (t <= OBSTACLE_T_MARGIN || t >= 1 - OBSTACLE_T_MARGIN) continue;
+    const perpDist = rx * px + ry * py; // signed perp distance
+    if (Math.abs(perpDist) >= clearance) continue;
+
+    const bulgeFactor = 2 * t * (1 - t); // > 0 for t ∈ (0, 1)
+    const dPos = (perpDist + clearance) / bulgeFactor;
+    const dNeg = (perpDist - clearance) / bulgeFactor;
+    if (dPos > posReq) posReq = dPos;
+    if (dNeg < negReq) negReq = dNeg;
+  }
+
+  if (posReq === 0 && negReq === 0) return 0;
+
+  // Pick the side requiring the smaller magnitude bend.
+  const chosen = posReq <= -negReq ? posReq : negReq;
+  if (chosen > OBSTACLE_MAX_OFFSET) return OBSTACLE_MAX_OFFSET;
+  if (chosen < -OBSTACLE_MAX_OFFSET) return -OBSTACLE_MAX_OFFSET;
+  return chosen;
+}
+
 export function computeEdgePaths(
   states: AutomatonState[],
   transitions: Transition[],
@@ -213,8 +277,14 @@ export function computeEdgePaths(
       const offsetDir = t.sourceId < t.targetId ? 1 : -1;
       const baseOffset = isBidirectional ? PARALLEL_OFFSET * offsetDir : 0;
       const fanOffset = fanOffsets.get(t.id) ?? 0;
+      const hasManualOffset =
+        t.controlPointOffset !== undefined &&
+        (t.controlPointOffset.x !== 0 || t.controlPointOffset.y !== 0);
+      const avoidOffset = hasManualOffset
+        ? 0
+        : obstacleAvoidanceOffset(source, target, states);
       paths.push(
-        computeEdge(t, source, target, baseOffset + fanOffset, automatonType),
+        computeEdge(t, source, target, baseOffset + fanOffset + avoidOffset, automatonType),
       );
     }
   }
