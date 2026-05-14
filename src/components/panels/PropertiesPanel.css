@@ -96,6 +96,21 @@
   color: var(--color-text-secondary);
 }
 
+.panel-warning {
+  font-size: 13px;
+  color: var(--color-warning);
+  line-height: 1.4;
+}
+
+.panel-warning-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.panel-warning-list li {
+  font-family: var(--font-mono);
+}
+
 .panel-stats {
   display: flex;
   gap: 16px;

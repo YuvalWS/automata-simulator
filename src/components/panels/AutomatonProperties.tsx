@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
 import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
 import { DEFAULT_BLANK_SYMBOL, BLANK_DISPLAY_OPTIONS, isBlankDisplayOption } from '@/models/epsilon';
+import { findOutOfAlphabetTransitions } from '@/services/simulation/validator';
 
 const TM_BLANK_DISPLAY_KEY = 'automata-tm-blank-display';
 
@@ -20,6 +21,11 @@ export function AutomatonProperties() {
 
   const currentBlank = automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL;
   const blankValue = isBlankDisplayOption(currentBlank) ? currentBlank : DEFAULT_BLANK_SYMBOL;
+
+  const outOfAlphabetTransitions = useMemo(
+    () => findOutOfAlphabetTransitions(automaton),
+    [automaton],
+  );
 
   useEffect(() => {
     if (automaton.type !== AutomatonType.TM) return;
@@ -172,6 +178,19 @@ export function AutomatonProperties() {
           data-testid="automaton-alphabet-input"
         />
       </label>
+
+      {outOfAlphabetTransitions.length > 0 && (
+        <div className="panel-warning" data-testid="alphabet-warning">
+          {'⚠'} Transitions using symbols not in the alphabet:
+          <ul className="panel-warning-list">
+            {outOfAlphabetTransitions.map((t) => (
+              <li key={t.transitionId}>
+                {t.sourceName} {'→'} {t.targetName}: {t.symbols.map((s) => `"${s}"`).join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

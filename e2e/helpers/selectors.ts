@@ -9,6 +9,7 @@ export const SEL = {
   automatonNameInput: '[data-testid="automaton-name-input"]',
   automatonTypeSelect: '[data-testid="automaton-type-select"]',
   automatonAlphabetInput: '[data-testid="automaton-alphabet-input"]',
+  alphabetWarning: '[data-testid="alphabet-warning"]',
 
   // State properties
   stateProperties: '[data-testid="state-properties"]',

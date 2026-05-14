@@ -136,6 +136,52 @@ export function validateAutomaton(automaton: Automaton): ValidationMessage[] {
   return messages;
 }
 
+export interface OutOfAlphabetTransition {
+  transitionId: string;
+  sourceName: string;
+  targetName: string;
+  symbols: string[];
+}
+
+/**
+ * Returns the transitions that use symbols not in the automaton's alphabet,
+ * each with its source/target state names and the offending symbols. Returns []
+ * when the alphabet is empty (nothing to check against) or for TM (tape symbols
+ * are implicit, not bound by an input alphabet). Epsilon is always allowed.
+ */
+export function findOutOfAlphabetTransitions(automaton: Automaton): OutOfAlphabetTransition[] {
+  if (automaton.alphabet.length === 0) return [];
+  if (automaton.type === AutomatonType.TM) return [];
+
+  const alphabetSet = new Set(automaton.alphabet);
+  const stateName = (id: string) => automaton.states.find((s) => s.id === id)?.name ?? id;
+  const result: OutOfAlphabetTransition[] = [];
+
+  for (const t of automaton.transitions) {
+    const bad = new Set<string>();
+    for (const sym of t.symbols) {
+      if (sym !== EPSILON && !alphabetSet.has(sym)) bad.add(sym);
+    }
+    if (t.pdaRules) {
+      for (const r of t.pdaRules) {
+        if (r.inputSymbol !== EPSILON && !alphabetSet.has(r.inputSymbol)) {
+          bad.add(r.inputSymbol);
+        }
+      }
+    }
+    if (bad.size > 0) {
+      result.push({
+        transitionId: t.id,
+        sourceName: stateName(t.sourceId),
+        targetName: stateName(t.targetId),
+        symbols: [...bad],
+      });
+    }
+  }
+
+  return result;
+}
+
 export function validateWord(word: string[], alphabet: string[]): ValidationMessage[] {
   if (alphabet.length === 0) return [];
 

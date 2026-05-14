@@ -30,6 +30,7 @@ Test multiple words at once and instantly see which are accepted or rejected.
 - **Word simulation** — step-by-step DFA/NFA/PDA/TM simulation with visual state/transition highlighting; Run auto-plays the animation and shows the final result
 - **Batch simulation** — test multiple words at once, see accept/reject results for each
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state; suggests switching to NFA when conflicts are found
+- **Alphabet warning** — when an alphabet is defined, the properties panel lists any transitions (by source → target) whose symbols are not in it
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
 - **DFA, NFA, PDA & TM support** — toggle between deterministic, nondeterministic, pushdown, and Turing machine modes
 - **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation

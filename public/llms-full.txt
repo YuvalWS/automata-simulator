@@ -178,6 +178,7 @@ const SaveFileSchema = z.object({
 - Exactly one state must have `isInitial: true`
 - All `sourceId` and `targetId` must reference valid state IDs
 - The `alphabet` array should list all symbols used in transitions (ε is excluded from the alphabet)
+- When the `alphabet` is non-empty, the app warns about transition symbols (DFA/NFA `symbols`, PDA `inputSymbol`) that are not in it; the TM alphabet is informational, so it is not checked
 - IDs must be non-empty strings (UUIDs are commonly used but any non-empty string works)
 
 ## Layout Tips

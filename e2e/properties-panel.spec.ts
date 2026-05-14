@@ -93,4 +93,27 @@ test.describe('Properties Panel', () => {
     const isAcceptingChecked = await page.locator(SEL.stateAcceptingCheckbox).isChecked();
     expect(isAcceptingChecked).toBe(false);
   });
+
+  test('warns when a transition uses a symbol not in the alphabet', async ({ page }) => {
+    // DFA with transition on 'a' but no alphabet defined yet → no warning
+    await builder.loadSimpleDFA();
+    await page.waitForTimeout(100);
+    await expect(page.locator(SEL.alphabetWarning)).not.toBeVisible();
+
+    // Set an alphabet that omits a symbol the transitions use ('a' is used, 'b' is used)
+    await page.locator(SEL.automatonAlphabetInput).fill('a');
+    await page.locator(SEL.automatonAlphabetInput).press('Tab');
+
+    // 'b' is used by transitions but not in the alphabet → warning appears,
+    // listing the offending transitions by source → target
+    const warning = page.locator(SEL.alphabetWarning);
+    await expect(warning).toBeVisible();
+    await expect(warning).toContainText('"b"');
+    await expect(warning).toContainText('q1 → q0');
+
+    // Add 'b' back to the alphabet → warning disappears
+    await page.locator(SEL.automatonAlphabetInput).fill('a, b');
+    await page.locator(SEL.automatonAlphabetInput).press('Tab');
+    await expect(warning).not.toBeVisible();
+  });
 });
