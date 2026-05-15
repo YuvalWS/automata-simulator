@@ -107,18 +107,42 @@ test.describe('Simulation', () => {
     expect(isActive).toBe(false);
   });
 
-  test('editing handles on states are hidden during simulation', async ({ page }) => {
-    // In edit mode the new-rule handles exist in the DOM
-    expect(await page.locator('.state-transition-handle').count()).toBeGreaterThan(0);
+  test('editing handle stretches to the cursor and disappears during simulation', async ({ page }) => {
+    // In edit mode, moving the cursor ~50 px from a state reveals the stretchy "+ arrow" handle
+    const q0 = page.locator(SEL.allStates).first();
+    const q0Box = await q0.boundingBox();
+    expect(q0Box).not.toBeNull();
+    const cx = q0Box!.x + q0Box!.width / 2;
+    const cy = q0Box!.y + q0Box!.height / 2;
+    await page.mouse.move(cx + 50, cy);
+    await expect(page.locator('.state-transition-handle')).toHaveCount(1);
 
+    // Enter simulation — handle should be gone even while the cursor stays in range
     await page.locator(SEL.toolbarSimulate).click();
-
-    // During simulation they are removed entirely
+    await page.mouse.move(cx + 50, cy);
     await expect(page.locator('.state-transition-handle')).toHaveCount(0);
 
-    // Exiting simulation restores the handles
+    // Exit simulation — re-hovering restores the handle
     await page.locator(SEL.simExitBtn).click();
-    expect(await page.locator('.state-transition-handle').count()).toBeGreaterThan(0);
+    await page.mouse.move(cx + 51, cy); // nudge to retrigger mousemove
+    await expect(page.locator('.state-transition-handle')).toHaveCount(1);
+  });
+
+  test('editing handle disappears once the cursor is too far from any state', async ({ page }) => {
+    const q0 = page.locator(SEL.allStates).first();
+    const q0Box = await q0.boundingBox();
+    expect(q0Box).not.toBeNull();
+    const cx = q0Box!.x + q0Box!.width / 2;
+    const cy = q0Box!.y + q0Box!.height / 2;
+
+    // Near the state — handle visible
+    await page.mouse.move(cx + 50, cy);
+    await expect(page.locator('.state-transition-handle')).toHaveCount(1);
+
+    // Far from any state — handle gone
+    const canvasBox = await canvas.getBBox();
+    await page.mouse.move(canvasBox.x + canvasBox.width - 20, canvasBox.y + canvasBox.height - 20);
+    await expect(page.locator('.state-transition-handle')).toHaveCount(0);
   });
 
   test('clicking the canvas during simulation surfaces an editing-locked hint', async ({ page }) => {

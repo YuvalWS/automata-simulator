@@ -78,7 +78,7 @@ export function AutomataCanvas() {
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
-  const [handleHover, setHandleHover] = useState<{ stateId: string; angle: number } | null>(null);
+  const [handleHover, setHandleHover] = useState<{ stateId: string; cursor: { x: number; y: number } } | null>(null);
   const [lockedHint, setLockedHint] = useState<{ x: number; y: number } | null>(null);
   const lockedHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -258,18 +258,20 @@ export function AutomataCanvas() {
         return;
       }
 
-      // Show "+" hint when hovering over empty canvas space, and compute handle angle for nearby states
+      // Track the cursor position for nearby states — drives the "new transition" handle
+      // (arrow stretches from state edge to cursor, terminating in a `+` circle).
       const svgPoint = getSvgPoint(e.clientX, e.clientY);
-      let nearestState: { id: string; dist: number; angle: number } | null = null;
+      let nearestState: { id: string; dist: number } | null = null;
       for (const s of automaton.states) {
         const dx = svgPoint.x - s.position.x;
         const dy = svgPoint.y - s.position.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist <= 60 && (!nearestState || dist < nearestState.dist)) {
-          nearestState = { id: s.id, dist, angle: Math.atan2(dy, dx) };
+        // 108 = state radius (28) + ~80px reach (≈ 2 cm at typical DPI)
+        if (dist <= 108 && (!nearestState || dist < nearestState.dist)) {
+          nearestState = { id: s.id, dist };
         }
       }
-      setHandleHover(nearestState ? { stateId: nearestState.id, angle: nearestState.angle } : null);
+      setHandleHover(nearestState ? { stateId: nearestState.id, cursor: svgPoint } : null);
 
       // Suppress "+" hint when near a transition edge
       let nearTransition = false;
@@ -943,8 +945,7 @@ export function AutomataCanvas() {
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
               editingLocked={editingLocked}
-              handleAngle={!isMobile && handleHover?.stateId === state.id ? handleHover.angle : undefined}
-              showHandle={false}
+              handleCursor={!isMobile && handleHover?.stateId === state.id ? handleHover.cursor : undefined}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
