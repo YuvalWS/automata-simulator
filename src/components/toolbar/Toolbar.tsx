@@ -1,4 +1,3 @@
-import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
@@ -11,8 +10,6 @@ import { TabDropdown } from '@/components/mobile/TabDropdown';
 import './Toolbar.css';
 
 export function Toolbar() {
-  const startPlacingState = useEditorStore((s) => s.startPlacingState);
-  const placingNewState = useEditorStore((s) => s.placingNewState);
   const automaton = useAutomatonStore((s) => s.automaton);
   const undo = useAutomatonStore((s) => s.undo);
   const redo = useAutomatonStore((s) => s.redo);
@@ -65,16 +62,6 @@ export function Toolbar() {
 
 
         <div className="toolbar-group toolbar-actions">
-          {!editingLocked && (
-            <button
-              className={`toolbar-btn toolbar-new-state ${placingNewState ? 'active' : ''}`}
-              onClick={() => startPlacingState()}
-              title="Add New State"
-            >
-              <span className="tool-icon">+</span>
-              <span className="tool-label">New State</span>
-            </button>
-          )}
           <button
             className={`toolbar-btn ${simIsActive ? 'toolbar-simulate-active' : 'toolbar-simulate'}`}
             onClick={simIsActive ? exitSimulation : enterSimulation}
@@ -127,16 +114,6 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar-group toolbar-actions">
-        {!editingLocked && (
-          <button
-            className={`toolbar-btn toolbar-new-state ${placingNewState ? 'active' : ''}`}
-            onClick={() => startPlacingState()}
-            title="Add New State — click canvas to place (N)"
-          >
-            <span className="tool-icon">+</span>
-            <span className="tool-label">New State</span>
-          </button>
-        )}
         <button
           className={`toolbar-btn ${simIsActive ? 'toolbar-simulate-active' : 'toolbar-simulate'}`}
           onClick={simIsActive ? exitSimulation : enterSimulation}

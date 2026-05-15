@@ -14,11 +14,14 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForSelector(SEL.canvas);
   });
 
+  const placingNewState = (page: Page) =>
+    page.evaluate(
+      () => (window as { __stores__?: any }).__stores__.editorStore.getState().placingNewState,
+    );
+
   test('N key activates new state placement mode', async ({ page }) => {
     await page.keyboard.press('n');
-
-    // The toolbar button should have active class
-    await expect(page.locator(`${SEL.toolbarNewState}.active`)).toBeVisible();
+    expect(await placingNewState(page)).toBe(true);
   });
 
   test('Escape clears selection', async ({ page }) => {
@@ -36,10 +39,10 @@ test.describe('Keyboard Shortcuts', () => {
 
   test('Escape cancels new state placement mode', async ({ page }) => {
     await page.keyboard.press('n');
-    await expect(page.locator(`${SEL.toolbarNewState}.active`)).toBeVisible();
+    expect(await placingNewState(page)).toBe(true);
 
     await page.keyboard.press('Escape');
-    await expect(page.locator(`${SEL.toolbarNewState}.active`)).not.toBeVisible();
+    expect(await placingNewState(page)).toBe(false);
   });
 
   test('Space toggles accepting on selected state', async ({ page }) => {
@@ -95,8 +98,7 @@ test.describe('Keyboard Shortcuts', () => {
     // Type 'n' — should NOT activate new state mode
     await page.keyboard.press('n');
 
-    // Check that new state mode is not active
-    await expect(page.locator(`${SEL.toolbarNewState}.active`)).not.toBeVisible();
+    expect(await placingNewState(page)).toBe(false);
   });
 
   test('Ctrl+Z and Ctrl+Shift+Z work for undo/redo', async ({ page }) => {

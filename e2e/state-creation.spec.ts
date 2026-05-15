@@ -55,13 +55,6 @@ test.describe('State Creation', () => {
     expect(names).toEqual(['q0', 'q1', 'q2']);
   });
 
-  test('New State toolbar button then click canvas creates state', async ({ page }) => {
-    await page.click(SEL.toolbarNewState);
-    await canvas.clickCanvas(500, 200);
-
-    await expect(page.locator(SEL.allStates)).toHaveCount(2);
-  });
-
   test('clicking on an existing state does NOT create a new state', async ({ page }) => {
     // Click on q0 directly — this selects it but should not create a new state
     const firstState = page.locator(SEL.allStates).first();

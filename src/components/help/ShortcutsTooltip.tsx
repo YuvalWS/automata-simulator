@@ -36,7 +36,7 @@ const touchGestures = [
 ];
 
 const desktopInstructions = [
-  'Click "+ New State" or press N, then click the canvas to place a state.',
+  'Hover an empty area of the canvas and click to place a state (or press N first).',
   'Click a state, then click another state within 3s to create a transition.',
   'Double-click a state to create a self-loop.',
   'Drag the arrow handle (appears on hover) from one state to another, or to empty space to create a new state.',

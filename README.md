@@ -68,7 +68,7 @@ Test multiple words at once and instantly see which are accepted or rejected.
 
 ## How to Use (Desktop)
 
-1. **Add states** — click "+ New State" in the toolbar (or press N), then click on the canvas to place
+1. **Add states** — hover an empty area of the canvas and click to place a state (or press N first, then click)
 2. **Create transitions** — click a source state, then click a target state within 3 seconds
 3. **Create self-loops** — double-click a state
 4. **Drag-to-connect** — hover over a state to reveal the arrow handle, drag it to another state (or to empty space to create a new state)
@@ -178,7 +178,7 @@ src/
 ├── stores/        # Zustand stores: automaton data, editor UI, undo/redo history, simulation
 ├── components/
 │   ├── canvas/    # SVG rendering: states, transitions, arrows, grid, symbol modal
-│   ├── toolbar/   # File operations, new state button, undo/redo
+│   ├── toolbar/   # File operations, undo/redo, simulate
 │   ├── panels/    # Properties panel for editing selected elements
 │   ├── mobile/    # Phone/tablet UI: hamburger menu, bottom bar, bottom sheet, tab dropdown
 │   └── help/      # Keyboard shortcuts & touch gestures tooltip

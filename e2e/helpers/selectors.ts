@@ -46,7 +46,6 @@ export const SEL = {
   tmBlankSymbolSelect: '[data-testid="tm-blank-symbol-select"]',
 
   // Toolbar buttons
-  toolbarNewState: '.toolbar-new-state',
   toolbarSimulate: '.toolbar-simulate',
   toolbarSimulateActive: '.toolbar-simulate-active',
   toolbarUndo: 'button[title*="Undo"]',
