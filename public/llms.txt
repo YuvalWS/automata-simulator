@@ -1,16 +1,18 @@
 # Automata Simulator
 
-> A web-based visual editor and simulator for finite automata (DFA and NFA).
+> A web-based visual editor and simulator for finite automata (DFA, NFA, PDA) and Turing Machines (TM).
 > URL: https://automata.yuweiss.dev
 > Source: https://github.com/YuvalWS/automata-simulator
 
 ## What This App Does
 
-Automata Simulator lets users build finite automata diagrams interactively, simulate words step-by-step with visual highlighting, and save/load their work as JSON files. Works on desktop, tablet, and phone with full touch support.
+Automata Simulator lets users build automata diagrams interactively, simulate words step-by-step with visual highlighting, and save/load their work as JSON files. Works on desktop, tablet, and phone with full touch support.
 
 Supported automaton types:
 - **DFA** (Deterministic Finite Automaton) — exactly one transition per symbol per state, no epsilon transitions
 - **NFA** (Nondeterministic Finite Automaton) — multiple transitions per symbol allowed, epsilon (ε) transitions allowed
+- **PDA** (Pushdown Automaton) — adds a stack with pop/peek and push operations; supports final-state and empty-stack acceptance
+- **TM** (Turing Machine) — read/write tape with head movement (L/S/R), configurable blank symbol; deterministic (DTM) and nondeterministic (NTM) variants; final-state and halt-on-accept acceptance modes; 1000-step cap with a `timeout` status
 
 ## JSON File Format
 
@@ -20,15 +22,19 @@ The app saves and loads automata as JSON files. You can generate these files pro
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.4.0",
   "automaton": {
     "id": "<unique string>",
     "name": "<display name>",
-    "type": "DFA" | "NFA",
+    "type": "DFA" | "NFA" | "PDA" | "TM",
     "alphabet": ["a", "b"],
     "states": [ ... ],
     "transitions": [ ... ],
-    "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
+    "acceptanceMode": "finalState" | "emptyStack" | "haltOnAccept",
+    "pdaStackMode": "pop" | "peek",
+    "tmMode": "deterministic" | "nondeterministic",
+    "tmBlankSymbol": "⊔"
   }
 }
 ```
@@ -52,9 +58,18 @@ The app saves and loads automata as JSON files. You can generate these files pro
   "id": "<unique string>",
   "sourceId": "<state id>",
   "targetId": "<state id>",
-  "symbols": ["a", "b"]
+  "symbols": ["a", "b"],
+  "pdaRules": [ { "inputSymbol": "a", "stackPop": "Z₀", "stackPush": ["A", "Z₀"] } ],
+  "tmRules":  [ { "readSymbols": ["0", "1"], "writeSymbol": "X", "direction": "R" } ]
 }
 ```
+
+- `symbols` is used by DFA/NFA only.
+- `pdaRules` is used by PDA only (mutually exclusive with `symbols`).
+- `tmRules` is used by TM only (mutually exclusive with `symbols`).
+  - `readSymbols` is a non-empty array of tape symbols; the rule fires if the head reads any of them. UI label: `0,1,Y → R`.
+  - `writeSymbol` is optional. When omitted (or empty), the head cell is left unchanged (a textbook no-op write). UI label drops the write column: `Y → R`.
+  - `direction` is `"L"`, `"R"`, or `"S"` (stay).
 
 ### Rules
 
@@ -62,7 +77,11 @@ The app saves and loads automata as JSON files. You can generate these files pro
 - At least one state should have `isAccepting: true` for meaningful simulation
 - DFA: each state must have at most one transition per symbol; epsilon (ε) is not allowed
 - NFA: multiple transitions per symbol are allowed; epsilon transitions use the symbol `"ε"` (U+03B5)
-- The `alphabet` array should contain all symbols used in transitions (excluding ε)
+- PDA: transitions use `pdaRules` (not `symbols`); stack-bottom marker is `"Z₀"`
+- TM: transitions use `tmRules` (not `symbols`); the tape is initialized from the input word, head starts at index 0; rules match against the tape symbol under the head, **not** against the input word position. Multi-read rules fire when the head sees any symbol in `readSymbols`. Omit `writeSymbol` for a no-op write.
+- DTM: at most one rule per `(state, readSym)` pair across all rules (a single rule's `readSymbols` array expands to one pair per symbol; two rules conflict if they share even one read symbol). Validator emits an error with a "Switch to NTM" suggestion.
+- TM simulation hard-caps at 1000 steps; non-halting machines produce a `timeout` snapshot status
+- The `alphabet` array should contain all symbols used in transitions (excluding ε); for TM the alphabet is informational only (the tape is unbounded)
 - All `sourceId` and `targetId` values must reference existing state `id` values
 - `viewport.zoom` must be a positive number
 - Self-loops: set `sourceId` equal to `targetId`
@@ -71,7 +90,7 @@ The app saves and loads automata as JSON files. You can generate these files pro
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.4.0",
   "automaton": {
     "id": "example-dfa",
     "name": "Ends with ab",
@@ -91,6 +110,35 @@ The app saves and loads automata as JSON files. You can generate these files pro
       { "id": "t5", "sourceId": "s2", "targetId": "s0", "symbols": ["b"] }
     ],
     "viewport": { "panX": 0, "panY": 0, "zoom": 1 }
+  }
+}
+```
+
+## Example: TM that flips a single 0 to 1
+
+```json
+{
+  "version": "1.4.0",
+  "automaton": {
+    "id": "example-tm",
+    "name": "Flip 0 to 1",
+    "type": "TM",
+    "alphabet": ["0", "1"],
+    "states": [
+      { "id": "s0", "name": "q0", "position": { "x": 100, "y": 200 }, "isInitial": true,  "isAccepting": false },
+      { "id": "s1", "name": "q1", "position": { "x": 280, "y": 200 }, "isInitial": false, "isAccepting": false },
+      { "id": "s2", "name": "qf", "position": { "x": 460, "y": 200 }, "isInitial": false, "isAccepting": true }
+    ],
+    "transitions": [
+      { "id": "t0", "sourceId": "s0", "targetId": "s1", "symbols": [],
+        "tmRules": [{ "readSymbols": ["0"], "writeSymbol": "1", "direction": "R" }] },
+      { "id": "t1", "sourceId": "s1", "targetId": "s2", "symbols": [],
+        "tmRules": [{ "readSymbols": ["⊔"], "direction": "S" }] }
+    ],
+    "viewport": { "panX": 0, "panY": 0, "zoom": 1 },
+    "tmMode": "deterministic",
+    "tmBlankSymbol": "⊔",
+    "acceptanceMode": "finalState"
   }
 }
 ```

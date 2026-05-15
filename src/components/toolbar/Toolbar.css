@@ -47,34 +47,6 @@
   cursor: default;
 }
 
-.toolbar-new-state {
-  padding: 5px 16px;
-  font-weight: 600;
-  font-size: 14px;
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.toolbar-new-state:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-}
-
-.toolbar-new-state.active {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
-}
-
-.toolbar-new-state .tool-icon {
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 700;
-}
-
-.toolbar-new-state .tool-label {
-  font-size: 13px;
-}
-
 .toolbar-simulate {
   padding: 5px 14px;
   font-weight: 600;

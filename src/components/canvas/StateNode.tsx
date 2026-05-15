@@ -2,8 +2,11 @@ import type { AutomatonState } from '@/models/automaton';
 
 const RADIUS = 28;
 const INNER_RADIUS = 22;
-const HANDLE_DISTANCE = RADIUS + 12;
-const HANDLE_RADIUS = 7;
+// "New transition" handle — arrow stretches from the state edge to the cursor while
+// the cursor is in range. ≈ 2 cm of reach beyond the state edge at typical DPI.
+const HANDLE_MIN_REACH = RADIUS + 8;   // cursor must be just outside the state edge
+const HANDLE_MAX_REACH = RADIUS + 80;  // hide once the cursor is farther than ~2 cm past the edge
+const HANDLE_CIRCLE_RADIUS = 10;
 
 export type SimulationStatus = 'active' | 'accepted' | 'rejected' | null;
 
@@ -12,8 +15,10 @@ interface StateNodeProps {
   isSelected: boolean;
   isPendingSource?: boolean;
   simulationStatus?: SimulationStatus;
-  handleAngle?: number;
-  showHandle?: boolean;
+  editingLocked?: boolean;
+  /** Cursor position in SVG coords when the cursor is near this state. Drives the
+   *  stretchy "new transition" arrow + `+` circle. Undefined hides the handle. */
+  handleCursor?: { x: number; y: number };
   onMouseDown: (e: React.MouseEvent, stateId: string) => void;
   onMouseUp: (e: React.MouseEvent, stateId: string) => void;
   onDoubleClick: (e: React.MouseEvent, stateId: string) => void;
@@ -25,8 +30,8 @@ export function StateNode({
   isSelected,
   isPendingSource,
   simulationStatus,
-  handleAngle,
-  showHandle,
+  editingLocked,
+  handleCursor,
   onMouseDown,
   onMouseUp,
   onDoubleClick,
@@ -60,11 +65,35 @@ export function StateNode({
 
   const simClass = simulationStatus ? `state-node--sim-${simulationStatus}` : '';
 
-  // Transition handle (arrow circle on state edge) — visible on hover (desktop) or always (mobile)
-  const handleAngleVal = showHandle ? 0 : (handleAngle ?? 0);
-  const hx = x + HANDLE_DISTANCE * Math.cos(handleAngleVal);
-  const hy = y + HANDLE_DISTANCE * Math.sin(handleAngleVal);
-  const handleClass = showHandle ? 'state-transition-handle-visible' : 'state-transition-handle';
+  // Compute the stretchy handle geometry from the cursor position.
+  let handleGeom: {
+    shaftStartX: number;
+    shaftStartY: number;
+    shaftEndX: number;
+    shaftEndY: number;
+    tipX: number;
+    tipY: number;
+  } | null = null;
+  if (handleCursor && !simulationStatus && !editingLocked) {
+    const dx = handleCursor.x - x;
+    const dy = handleCursor.y - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= HANDLE_MIN_REACH && dist <= HANDLE_MAX_REACH) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      // Shaft ends just before the `+` circle so the arrowhead sits between
+      // the shaft and the circle, forming a single coherent arrow.
+      const shaftEndDist = dist - HANDLE_CIRCLE_RADIUS - 1;
+      handleGeom = {
+        shaftStartX: x + RADIUS * nx,
+        shaftStartY: y + RADIUS * ny,
+        shaftEndX: x + shaftEndDist * nx,
+        shaftEndY: y + shaftEndDist * ny,
+        tipX: handleCursor.x,
+        tipY: handleCursor.y,
+      };
+    }
+  }
 
   return (
     <g
@@ -121,39 +150,60 @@ export function StateNode({
       >
         {state.name}
       </text>
-      {/* Drag handle for creating transitions — follows mouse angle around state, hidden during simulation */}
-      {!simulationStatus && (
-        <>
+      {/* Stretchy "new transition" handle — arrow from state edge to the cursor,
+          terminating in a `+` circle. Only visible while the cursor is within range. */}
+      {handleGeom && (
+        <g
+          className="state-transition-handle"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onHandleDragStart(e, state.id);
+          }}
+          style={{ cursor: 'crosshair' }}
+        >
+          {/* Transparent thick hit-area line along the shaft */}
+          <line
+            x1={handleGeom.shaftStartX}
+            y1={handleGeom.shaftStartY}
+            x2={handleGeom.tipX}
+            y2={handleGeom.tipY}
+            stroke="transparent"
+            strokeWidth={16}
+          />
+          {/* Visible shaft with an arrowhead pointing at the `+` circle */}
+          <line
+            x1={handleGeom.shaftStartX}
+            y1={handleGeom.shaftStartY}
+            x2={handleGeom.shaftEndX}
+            y2={handleGeom.shaftEndY}
+            stroke="var(--color-primary)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            markerEnd="url(#arrowhead-ghost)"
+            pointerEvents="none"
+          />
+          {/* `+` circle anchored at the cursor */}
           <circle
-            className={handleClass}
-            cx={hx}
-            cy={hy}
-            r={showHandle ? HANDLE_RADIUS + 2 : HANDLE_RADIUS}
+            cx={handleGeom.tipX}
+            cy={handleGeom.tipY}
+            r={HANDLE_CIRCLE_RADIUS}
             fill="var(--color-primary)"
             stroke="white"
             strokeWidth={1.5}
-            opacity={showHandle ? 0.7 : 0}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onHandleDragStart(e, state.id);
-            }}
-            style={{ cursor: 'crosshair' }}
           />
           <text
-            className={handleClass}
-            x={hx}
-            y={hy}
+            x={handleGeom.tipX}
+            y={handleGeom.tipY + 0.5}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={showHandle ? '12' : '10'}
+            fontSize={15}
+            fontWeight={700}
             fill="white"
             pointerEvents="none"
-            opacity={showHandle ? 0.9 : 0}
-            transform={`rotate(${handleAngleVal * (180 / Math.PI)}, ${hx}, ${hy})`}
           >
-            {'\u2192'}
+            +
           </text>
-        </>
+        </g>
       )}
     </g>
   );

@@ -7,13 +7,14 @@ interface TransitionEdgeProps {
   edgePath: EdgePath;
   transition: Transition;
   automatonType: AutomatonType;
+  tmBlankSymbol?: string;
   isSelected: boolean;
   isSimActive?: boolean;
   onClick: (e: React.MouseEvent, transitionId: string) => void;
   onDoubleClick: (e: React.MouseEvent, transitionId: string) => void;
 }
 
-export function TransitionEdge({ edgePath, transition, automatonType, isSelected, isSimActive, onClick, onDoubleClick }: TransitionEdgeProps) {
+export function TransitionEdge({ edgePath, transition, automatonType, tmBlankSymbol, isSelected, isSimActive, onClick, onDoubleClick }: TransitionEdgeProps) {
   let strokeColor = 'var(--color-transition-stroke)';
   let strokeWidth = 2;
 
@@ -25,7 +26,7 @@ export function TransitionEdge({ edgePath, transition, automatonType, isSelected
     strokeWidth = 2.5;
   }
 
-  const label = getTransitionLabel(transition, automatonType);
+  const label = getTransitionLabel(transition, automatonType, tmBlankSymbol);
   const className = `transition-edge${isSimActive ? ' transition-edge--sim-active' : ''}`;
 
   return (

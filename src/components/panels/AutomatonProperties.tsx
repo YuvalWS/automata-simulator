@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { AutomatonType } from '@/models/types';
-import type { PdaAcceptanceMode, PdaStackMode } from '@/models/types';
+import type { AcceptanceMode, PdaStackMode, TmMode } from '@/models/types';
+import { DEFAULT_BLANK_SYMBOL, BLANK_DISPLAY_OPTIONS, isBlankDisplayOption } from '@/models/epsilon';
+import { findOutOfAlphabetTransitions } from '@/services/simulation/validator';
+
+const TM_BLANK_DISPLAY_KEY = 'automata-tm-blank-display';
 
 export function AutomatonProperties() {
   const automaton = useAutomatonStore((s) => s.automaton);
@@ -10,8 +14,26 @@ export function AutomatonProperties() {
   const setAlphabet = useAutomatonStore((s) => s.setAlphabet);
   const setAcceptanceMode = useAutomatonStore((s) => s.setAcceptanceMode);
   const setPdaStackMode = useAutomatonStore((s) => s.setPdaStackMode);
+  const setTmMode = useAutomatonStore((s) => s.setTmMode);
+  const setTmBlankSymbol = useAutomatonStore((s) => s.setTmBlankSymbol);
   const [name, setLocalName] = useState(automaton.name);
   const [alphabetText, setAlphabetText] = useState(automaton.alphabet.join(', '));
+
+  const currentBlank = automaton.tmBlankSymbol ?? DEFAULT_BLANK_SYMBOL;
+  const blankValue = isBlankDisplayOption(currentBlank) ? currentBlank : DEFAULT_BLANK_SYMBOL;
+
+  const outOfAlphabetTransitions = useMemo(
+    () => findOutOfAlphabetTransitions(automaton),
+    [automaton],
+  );
+
+  useEffect(() => {
+    if (automaton.type !== AutomatonType.TM) return;
+    const stored = localStorage.getItem(TM_BLANK_DISPLAY_KEY);
+    if (stored && isBlankDisplayOption(stored) && stored !== currentBlank) {
+      setTmBlankSymbol(stored);
+    }
+  }, [automaton.type, currentBlank, setTmBlankSymbol]);
 
   useEffect(() => {
     setLocalName(automaton.name);
@@ -60,9 +82,10 @@ export function AutomatonProperties() {
           onChange={(e) => setType(e.target.value as AutomatonType)}
           data-testid="automaton-type-select"
         >
-          <option value={AutomatonType.DFA}>DFA</option>
-          <option value={AutomatonType.NFA}>NFA</option>
-          <option value={AutomatonType.PDA}>PDA</option>
+          <option value={AutomatonType.DFA}>DFA — Deterministic Finite Automaton</option>
+          <option value={AutomatonType.NFA}>NFA — Nondeterministic Finite Automaton</option>
+          <option value={AutomatonType.PDA}>PDA — Pushdown Automaton</option>
+          <option value={AutomatonType.TM}>TM — Turing Machine</option>
         </select>
       </label>
 
@@ -72,7 +95,7 @@ export function AutomatonProperties() {
           <select
             className="panel-select"
             value={automaton.acceptanceMode ?? 'finalState'}
-            onChange={(e) => setAcceptanceMode(e.target.value as PdaAcceptanceMode)}
+            onChange={(e) => setAcceptanceMode(e.target.value as AcceptanceMode)}
             data-testid="pda-acceptance-mode-select"
           >
             <option value="finalState">Final State</option>
@@ -96,6 +119,52 @@ export function AutomatonProperties() {
         </label>
       )}
 
+      {automaton.type === AutomatonType.TM && (
+        <>
+          <label className="panel-field">
+            <span className="panel-label">TM Mode</span>
+            <select
+              className="panel-select"
+              value={automaton.tmMode ?? 'deterministic'}
+              onChange={(e) => setTmMode(e.target.value as TmMode)}
+              data-testid="tm-mode-select"
+            >
+              <option value="deterministic">Deterministic</option>
+              <option value="nondeterministic">Nondeterministic</option>
+            </select>
+          </label>
+          <label className="panel-field">
+            <span className="panel-label">Acceptance Mode</span>
+            <select
+              className="panel-select"
+              value={automaton.acceptanceMode ?? 'finalState'}
+              onChange={(e) => setAcceptanceMode(e.target.value as AcceptanceMode)}
+              data-testid="tm-acceptance-mode-select"
+            >
+              <option value="finalState">Final State</option>
+              <option value="haltOnAccept">Halt on Accept</option>
+            </select>
+          </label>
+          <label className="panel-field">
+            <span className="panel-label">Blank Symbol</span>
+            <select
+              className="panel-select"
+              value={blankValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                localStorage.setItem(TM_BLANK_DISPLAY_KEY, v);
+                setTmBlankSymbol(v);
+              }}
+              data-testid="tm-blank-symbol-select"
+            >
+              {BLANK_DISPLAY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
+
       <label className="panel-field">
         <span className="panel-label">Alphabet (comma-separated)</span>
         <input
@@ -109,6 +178,19 @@ export function AutomatonProperties() {
           data-testid="automaton-alphabet-input"
         />
       </label>
+
+      {outOfAlphabetTransitions.length > 0 && (
+        <div className="panel-warning" data-testid="alphabet-warning">
+          {'⚠'} Transitions using symbols not in the alphabet:
+          <ul className="panel-warning-list">
+            {outOfAlphabetTransitions.map((t) => (
+              <li key={t.transitionId}>
+                {t.sourceName} {'→'} {t.targetName}: {t.symbols.map((s) => `"${s}"`).join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

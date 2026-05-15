@@ -6,7 +6,7 @@
  * Validation errors block simulation; warnings are displayed but allow simulation.
  */
 import { describe, it, expect } from 'vitest';
-import { validateAutomaton, validateWord } from '@/services/simulation/validator';
+import { validateAutomaton, validateWord, findOutOfAlphabetTransitions } from '@/services/simulation/validator';
 import type { Automaton } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
 import { EPSILON, STACK_BOTTOM } from '@/models/epsilon';
@@ -171,6 +171,73 @@ describe('validateWord', () => {
   });
 });
 
+describe('findOutOfAlphabetTransitions', () => {
+  it('returns [] when all transition symbols are in the alphabet', () => {
+    expect(findOutOfAlphabetTransitions(makeAutomaton())).toEqual([]);
+  });
+
+  it('returns [] when the alphabet is empty (nothing to check against)', () => {
+    const auto = makeAutomaton({
+      alphabet: [],
+      transitions: [{ id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['c'] }],
+    });
+    expect(findOutOfAlphabetTransitions(auto)).toEqual([]);
+  });
+
+  it('detects a transition symbol not in the alphabet and reports source/target names', () => {
+    const auto = makeAutomaton({
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+        { id: 't2', sourceId: 'q1', targetId: 'q1', symbols: ['c'] },
+      ],
+    });
+    expect(findOutOfAlphabetTransitions(auto)).toEqual([
+      { transitionId: 't2', sourceName: 'q1', targetName: 'q1', symbols: ['c'] },
+    ]);
+  });
+
+  it('reports each offending transition with its distinct out-of-alphabet symbols', () => {
+    const auto = makeAutomaton({
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['c', 'd', 'c'] },
+      ],
+    });
+    const result = findOutOfAlphabetTransitions(auto);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.symbols.sort()).toEqual(['c', 'd']);
+  });
+
+  it('ignores epsilon', () => {
+    const auto = makeAutomaton({
+      type: AutomatonType.NFA,
+      transitions: [{ id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [EPSILON] }],
+    });
+    expect(findOutOfAlphabetTransitions(auto)).toEqual([]);
+  });
+
+  it('checks PDA input symbols against the alphabet', () => {
+    const pda = makeAutomaton({
+      type: AutomatonType.PDA,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], pdaRules: [{ inputSymbol: 'z', stackPop: STACK_BOTTOM, stackPush: [] }] },
+      ],
+    });
+    expect(findOutOfAlphabetTransitions(pda)).toEqual([
+      { transitionId: 't1', sourceName: 'q0', targetName: 'q1', symbols: ['z'] },
+    ]);
+  });
+
+  it('returns [] for TM (tape symbols are not bound by the input alphabet)', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['z'], direction: 'R' }] },
+      ],
+    });
+    expect(findOutOfAlphabetTransitions(tm)).toEqual([]);
+  });
+});
+
 // --- Additional edge cases ---
 
 describe('validateAutomaton edge cases', () => {
@@ -304,5 +371,119 @@ describe('PDA validation', () => {
     });
     const msgs = validateAutomaton(pda);
     expect(msgs.some((m) => m.type === 'warning' && m.message.includes('empty-stack'))).toBe(true);
+  });
+
+  // ---------- TM validation ----------
+
+  it('TM: errors on DTM duplicate rule for same (state, readSymbol)', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'b', direction: 'L' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    const conflict = msgs.find((m) => m.type === 'error' && m.message.includes('DTM conflict'));
+    expect(conflict).toBeDefined();
+    expect(conflict!.action?.key).toBe('switch-ntm');
+  });
+
+  it('TM: no duplicate-rule error in nondeterministic mode', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'nondeterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'b', direction: 'L' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.filter((m) => m.type === 'error' && m.message.includes('DTM conflict'))).toHaveLength(0);
+  });
+
+  it('TM: warns when transitions exist but no tmRules anywhere', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: ['a'] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('TM rules'))).toBe(true);
+  });
+
+  it('TM: warns when haltOnAccept and accepting states are present', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'haltOnAccept',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [{ readSymbols: ['a'], writeSymbol: 'a', direction: 'R' }] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'warning' && m.message.includes('halt-on-accept'))).toBe(true);
+  });
+
+  it('TM: errors when no initial state', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.some((m) => m.type === 'error' && m.message.toLowerCase().includes('initial'))).toBe(true);
+  });
+
+  it('TM: DTM conflict when two rules overlap on even one read symbol', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['0', '1'], direction: 'R' },
+        ] },
+        { id: 't2', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['1', '2'], direction: 'L' },
+        ] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    const conflict = msgs.find((m) => m.type === 'error' && m.message.includes('DTM conflict'));
+    expect(conflict).toBeDefined();
+    expect(conflict!.message).toMatch(/read symbol "1"/);
+  });
+
+  it('TM: a single multi-read rule does not conflict with itself', () => {
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [
+          { readSymbols: ['0', '1', '2'], direction: 'R' },
+        ] },
+      ],
+    });
+    const msgs = validateAutomaton(tm);
+    expect(msgs.filter((m) => m.type === 'error' && m.message.includes('DTM conflict'))).toHaveLength(0);
   });
 });

@@ -1,5 +1,13 @@
 export const EPSILON = '\u03B5';
 export const STACK_BOTTOM = 'Z\u2080';
+export const DEFAULT_BLANK_SYMBOL = '⊔'; // ⊔ (U+2294, LaTeX \sqcup)
+
+export const BLANK_DISPLAY_OPTIONS = ['_', '⊔', 'Δ'] as const;
+export type BlankDisplayOption = (typeof BLANK_DISPLAY_OPTIONS)[number];
+
+export function isBlankDisplayOption(s: string): s is BlankDisplayOption {
+  return (BLANK_DISPLAY_OPTIONS as readonly string[]).includes(s);
+}
 
 export function isEpsilon(symbol: string): boolean {
   return symbol === EPSILON;
@@ -16,4 +24,23 @@ export function normalizeEpsilon(val: string): string {
   if (val === '') return EPSILON;
   if (val === '\u00CE\u00B5') return EPSILON; // Latin-1 mojibake of \u03B5
   return val;
+}
+
+/**
+ * Convert canonical blank (DEFAULT_BLANK_SYMBOL) in `s` to the user's chosen
+ * display blank. tmBlankSymbol is a display-only preference; rules, the tape,
+ * and JSON storage always use DEFAULT_BLANK_SYMBOL canonically.
+ */
+export function toDisplayBlank(s: string, displayBlank: string | undefined): string {
+  if (!displayBlank || displayBlank === DEFAULT_BLANK_SYMBOL) return s;
+  return s.split(DEFAULT_BLANK_SYMBOL).join(displayBlank);
+}
+
+/**
+ * Convert the user's display blank in `s` to the canonical DEFAULT_BLANK_SYMBOL
+ * for storage. Inverse of toDisplayBlank.
+ */
+export function fromDisplayBlank(s: string, displayBlank: string | undefined): string {
+  if (!displayBlank || displayBlank === DEFAULT_BLANK_SYMBOL) return s;
+  return s.split(displayBlank).join(DEFAULT_BLANK_SYMBOL);
 }

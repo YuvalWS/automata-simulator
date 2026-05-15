@@ -4,11 +4,13 @@ import { buildSimulationTrace } from '@/services/simulation/simulator';
 import { validateAutomaton, validateWord } from '@/services/simulation/validator';
 import type { ValidationMessage } from '@/services/simulation/validator';
 import { useAutomatonStore } from './automaton-store';
+import { AutomatonType } from '@/models/types';
 
 export interface BatchResult {
   word: string[];
   wordDisplay: string;
   status: 'accepted' | 'rejected';
+  finalTape?: string[]; // TM only: tape array from the last snapshot's first configuration
 }
 
 interface SimulationStore {
@@ -91,9 +93,9 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     const automaton = useAutomatonStore.getState().automaton;
     const word = parseWord(wordInput);
 
-    // Validate
+    // Validate. TM has no fixed input alphabet (tape symbols are implicit), so skip word-alphabet check.
     const automatonMessages = validateAutomaton(automaton);
-    const wordMessages = validateWord(word, automaton.alphabet);
+    const wordMessages = automaton.type === AutomatonType.TM ? [] : validateWord(word, automaton.alphabet);
     const allMessages = [...automatonMessages, ...wordMessages];
     const hasErrors = allMessages.some((m) => m.type === 'error');
 
@@ -203,10 +205,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       const word = parseWord(line);
       const trace = buildSimulationTrace(automaton, word);
       const lastSnap = trace.snapshots[trace.snapshots.length - 1];
+      const finalTape = lastSnap?.tmConfigurations?.[0]?.tape;
       return {
         word,
         wordDisplay: word.length === 0 ? '\u03B5' : word.join(''),
         status: lastSnap?.status === 'accepted' ? 'accepted' : 'rejected',
+        ...(finalTape !== undefined ? { finalTape } : {}),
       };
     });
 

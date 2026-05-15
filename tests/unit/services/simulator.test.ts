@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { buildSimulationTrace } from '@/services/simulation/simulator';
 import type { SimulationSnapshot } from '@/services/simulation/simulator';
-import type { Automaton, PdaRule } from '@/models/automaton';
+import type { Automaton, PdaRule, TmRule } from '@/models/automaton';
 import { AutomatonType } from '@/models/types';
+import type { TmDirection } from '@/models/types';
 import { EPSILON, STACK_BOTTOM } from '@/models/epsilon';
 
 /** Get last element of array (replacement for .at(-1) which needs ES2022) */
@@ -1223,5 +1224,369 @@ describe('PDA: peek mode', () => {
     const lastSnap = last(trace.snapshots);
     expect(lastSnap.status).toBe('accepted');
     expect(lastSnap.configurations![0]!.stack).toEqual(['X']);
+  });
+});
+
+// ---------- Turing Machine ----------
+
+function makeTmRule(reads: string | string[], writeSymbol: string | undefined, direction: TmDirection): TmRule {
+  const readSymbols = Array.isArray(reads) ? reads : [reads];
+  const rule: TmRule = { readSymbols, direction };
+  if (writeSymbol !== undefined && writeSymbol.length > 0) rule.writeSymbol = writeSymbol;
+  return rule;
+}
+
+describe('TM simulation', () => {
+  describe('DTM: simple accept on final state', () => {
+    // q0 reads '0', writes '1', moves R, to q1; q1 reads '⊔', S, to q2 (accepting)
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      alphabet: ['0', '1'],
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [makeTmRule('0', '1', 'R')] },
+        { id: 't2', sourceId: 'q1', targetId: 'q2', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
+      ],
+    });
+
+    it('accepts input "0"', () => {
+      const trace = buildSimulationTrace(tm, ['0']);
+      const lastSnap = last(trace.snapshots);
+      expect(lastSnap.status).toBe('accepted');
+      // The tape after q0 step: ['1', '⊔'] (R appended blank); after q1 step: tape unchanged.
+      expect(lastSnap.tmConfigurations![0]!.tape[0]).toBe('1');
+    });
+
+    it('rejects input "1" (no rule from q0 on 1)', () => {
+      const trace = buildSimulationTrace(tm, ['1']);
+      const lastSnap = last(trace.snapshots);
+      // q0 is not accepting and no rule applies → rejected in finalState mode.
+      expect(lastSnap.status).toBe('rejected');
+    });
+
+    it('every snapshot includes tmConfigurations', () => {
+      const trace = buildSimulationTrace(tm, ['0']);
+      for (const snap of trace.snapshots) {
+        expect(snap.tmConfigurations).toBeDefined();
+      }
+    });
+  });
+
+  describe('DTM: 0^n 1^n acceptance via tape marking', () => {
+    // Strategy: q0 reads '0' → 'X' R, finds matching '1' → 'Y' L, returns to start, repeats.
+    // Accept when all matched (only X and Y remaining, then blank).
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      alphabet: ['0', '1'],
+      tmMode: 'deterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'q1', name: 'q1', position: { x: 100, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q2', name: 'q2', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'q3', name: 'q3', position: { x: 300, y: 0 }, isInitial: false, isAccepting: false },
+        { id: 'qf', name: 'qf', position: { x: 400, y: 0 }, isInitial: false, isAccepting: true },
+      ],
+      transitions: [
+        // q0: mark a '0' as 'X', enter scan-right
+        { id: 't1', sourceId: 'q0', targetId: 'q1', symbols: [], tmRules: [makeTmRule('0', 'X', 'R')] },
+        // q0: if we see Y here (all left side processed), check for blank to accept
+        { id: 't2', sourceId: 'q0', targetId: 'q3', symbols: [], tmRules: [makeTmRule('Y', 'Y', 'R')] },
+        // q1: skip 0s and Ys, find a '1'
+        { id: 't3', sourceId: 'q1', targetId: 'q1', symbols: [], tmRules: [makeTmRule('0', '0', 'R'), makeTmRule('Y', 'Y', 'R')] },
+        // q1: found '1' → 'Y', go back
+        { id: 't4', sourceId: 'q1', targetId: 'q2', symbols: [], tmRules: [makeTmRule('1', 'Y', 'L')] },
+        // q2: walk back to leftmost X, skip 0s and Ys
+        { id: 't5', sourceId: 'q2', targetId: 'q2', symbols: [], tmRules: [makeTmRule('0', '0', 'L'), makeTmRule('Y', 'Y', 'L')] },
+        // q2: hit X (or blank if all processed): move right to next 0
+        { id: 't6', sourceId: 'q2', targetId: 'q0', symbols: [], tmRules: [makeTmRule('X', 'X', 'R')] },
+        // q3: walk through Ys
+        { id: 't7', sourceId: 'q3', targetId: 'q3', symbols: [], tmRules: [makeTmRule('Y', 'Y', 'R')] },
+        // q3: blank → accept
+        { id: 't8', sourceId: 'q3', targetId: 'qf', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
+      ],
+    });
+
+    it('accepts "0011"', () => {
+      const trace = buildSimulationTrace(tm, ['0', '0', '1', '1']);
+      expect(last(trace.snapshots).status).toBe('accepted');
+    });
+
+    it('accepts "01"', () => {
+      const trace = buildSimulationTrace(tm, ['0', '1']);
+      expect(last(trace.snapshots).status).toBe('accepted');
+    });
+
+    it('rejects "001"', () => {
+      const trace = buildSimulationTrace(tm, ['0', '0', '1']);
+      expect(last(trace.snapshots).status).toBe('rejected');
+    });
+
+    it('rejects "011"', () => {
+      const trace = buildSimulationTrace(tm, ['0', '1', '1']);
+      expect(last(trace.snapshots).status).toBe('rejected');
+    });
+  });
+
+  describe('NTM: two rules from the same state, both branches explored', () => {
+    // Simple NTM: from q0 on '0' we can go to qa (acc) or qb (non-acc).
+    // With finalState mode, the qa branch should accept on entry.
+    const tm = makeAutomaton({
+      type: AutomatonType.TM,
+      tmMode: 'nondeterministic',
+      tmBlankSymbol: '⊔',
+      acceptanceMode: 'finalState',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        { id: 'qa', name: 'qa', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        { id: 'qb', name: 'qb', position: { x: 200, y: 0 }, isInitial: false, isAccepting: false },
+      ],
+      transitions: [
+        { id: 't1', sourceId: 'q0', targetId: 'qa', symbols: [], tmRules: [makeTmRule('0', '0', 'R')] },
+        { id: 't2', sourceId: 'q0', targetId: 'qb', symbols: [], tmRules: [makeTmRule('0', '0', 'R')] },
+      ],
+    });
+
+    it('accepts when one branch reaches accepting state', () => {
+      const trace = buildSimulationTrace(tm, ['0']);
+      expect(last(trace.snapshots).status).toBe('accepted');
+    });
+
+    it('records both configurations in the snapshot before acceptance', () => {
+      const trace = buildSimulationTrace(tm, ['0']);
+      const step1 = trace.snapshots[1];
+      expect(step1).toBeDefined();
+      // The accepted snapshot should still hold both branches.
+      expect(step1!.tmConfigurations!.length).toBe(2);
+    });
+  });
+
+  describe('Acceptance modes', () => {
+    // q0 has no rules from non-accepting state → halts.
+    const noRules = makeAutomaton({
+      type: AutomatonType.TM,
+      tmBlankSymbol: '⊔',
+      states: [
+        { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+      ],
+      transitions: [],
+    });
+
+    it('finalState: rejects when no rule and state is non-accepting', () => {
+      const tm = { ...noRules, acceptanceMode: 'finalState' as const };
+      const trace = buildSimulationTrace(tm, ['x']);
+      expect(last(trace.snapshots).status).toBe('rejected');
+    });
+
+    it('haltOnAccept: accepts when no rule (unconditional halt)', () => {
+      const tm = { ...noRules, acceptanceMode: 'haltOnAccept' as const };
+      const trace = buildSimulationTrace(tm, ['x']);
+      expect(last(trace.snapshots).status).toBe('accepted');
+    });
+  });
+
+  describe('Step cap timeout', () => {
+    it('returns status "timeout" after MAX_TM_STEPS steps without termination', () => {
+      // Infinite loop: q0 reads any symbol, writes blank, R, stays in q0.
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'q0', symbols: [], tmRules: [
+            makeTmRule('a', '⊔', 'R'),
+            makeTmRule('⊔', '⊔', 'R'),
+          ]},
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      expect(last(trace.snapshots).status).toBe('timeout');
+    });
+  });
+
+  describe('Head growth', () => {
+    it('grows the tape to the left when head moves below index 0', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          // Move L from index 0 → prepend blank, head stays at 0
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('a', 'a', 'L')] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      const lastSnap = last(trace.snapshots);
+      const cfg = lastSnap.tmConfigurations![0]!;
+      expect(cfg.tape[0]).toBe('⊔');
+      expect(cfg.tape[1]).toBe('a');
+      expect(cfg.headIndex).toBe(0);
+      expect(cfg.leftmostIndex).toBe(-1);
+    });
+
+    it('grows the tape to the right when head moves past the end', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('a', 'a', 'R')] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      const cfg = last(trace.snapshots).tmConfigurations![0]!;
+      expect(cfg.tape).toEqual(['a', '⊔']);
+      expect(cfg.headIndex).toBe(1);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('empty word: tape is a single blank cell', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('⊔', '⊔', 'S')] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, []);
+      const lastSnap = last(trace.snapshots);
+      expect(lastSnap.status).toBe('accepted');
+      expect(lastSnap.tmConfigurations![0]!.tape).toEqual(['⊔']);
+    });
+
+    it('no initial state: single rejected snapshot', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        states: [],
+        transitions: [],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      expect(trace.snapshots).toHaveLength(1);
+      expect(trace.snapshots[0]!.status).toBe('rejected');
+    });
+
+    it('stay direction (S): head does not move, state changes', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [makeTmRule('a', 'b', 'S')] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      const cfg = last(trace.snapshots).tmConfigurations![0]!;
+      expect(cfg.headIndex).toBe(0);
+      expect(cfg.tape[0]).toBe('b');
+      expect(cfg.stateId).toBe('qf');
+    });
+  });
+
+  describe('Multi-read rule', () => {
+    function mkTm(rule: TmRule, input: string[]) {
+      return {
+        ...makeAutomaton({
+          type: AutomatonType.TM,
+          tmBlankSymbol: '⊔',
+          acceptanceMode: 'finalState',
+          states: [
+            { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+            { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+          ],
+          transitions: [
+            { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [rule] },
+          ],
+        }),
+        input,
+      };
+    }
+
+    it('a single rule with multiple readSymbols matches each one', () => {
+      const rule: TmRule = { readSymbols: ['0', '1'], direction: 'R' };
+      for (const word of [['0'], ['1']]) {
+        const { input, ...tm } = mkTm(rule, word);
+        const trace = buildSimulationTrace(tm, input);
+        expect(last(trace.snapshots).status).toBe('accepted');
+      }
+    });
+
+    it('non-matching symbol is rejected even when other reads in the same rule match', () => {
+      const rule: TmRule = { readSymbols: ['0', '1'], direction: 'R' };
+      const { input, ...tm } = mkTm(rule, ['x']);
+      const trace = buildSimulationTrace(tm, input);
+      expect(last(trace.snapshots).status).toBe('rejected');
+    });
+  });
+
+  describe('Optional write (no-op)', () => {
+    it('rule with writeSymbol=undefined leaves the head cell unchanged', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [
+            { readSymbols: ['a'], direction: 'R' },  // no writeSymbol at all
+          ] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      const cfg = last(trace.snapshots).tmConfigurations![0]!;
+      expect(cfg.tape[0]).toBe('a');
+    });
+
+    it('rule with writeSymbol="" (empty string) also leaves the head cell unchanged', () => {
+      const tm = makeAutomaton({
+        type: AutomatonType.TM,
+        tmBlankSymbol: '⊔',
+        acceptanceMode: 'finalState',
+        states: [
+          { id: 'q0', name: 'q0', position: { x: 0, y: 0 }, isInitial: true, isAccepting: false },
+          { id: 'qf', name: 'qf', position: { x: 100, y: 0 }, isInitial: false, isAccepting: true },
+        ],
+        transitions: [
+          { id: 't1', sourceId: 'q0', targetId: 'qf', symbols: [], tmRules: [
+            { readSymbols: ['a'], writeSymbol: '', direction: 'R' },
+          ] },
+        ],
+      });
+      const trace = buildSimulationTrace(tm, ['a']);
+      const cfg = last(trace.snapshots).tmConfigurations![0]!;
+      expect(cfg.tape[0]).toBe('a');
+    });
   });
 });

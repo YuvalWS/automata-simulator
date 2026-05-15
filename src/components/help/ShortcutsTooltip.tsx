@@ -36,7 +36,7 @@ const touchGestures = [
 ];
 
 const desktopInstructions = [
-  'Click "+ New State" or press N, then click the canvas to place a state.',
+  'Hover an empty area of the canvas and click to place a state (or press N first).',
   'Click a state, then click another state within 3s to create a transition.',
   'Double-click a state to create a self-loop.',
   'Drag the arrow handle (appears on hover) from one state to another, or to empty space to create a new state.',
@@ -45,7 +45,7 @@ const desktopInstructions = [
   'Shift+click states to add/remove from multi-selection. Shift+drag on canvas for rubber-band selection.',
   'Scroll to zoom, drag empty canvas to pan.',
   'Select element(s) and press Delete to remove them. Ctrl+A to select all.',
-  'Click Simulate to enter simulation mode. Run auto-plays the trace.',
+  'Click Simulate to enter simulation mode. Run auto-plays the trace. Editing controls are hidden while simulating — exit simulation to edit the machine.',
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
   'Click "Fit" in the zoom controls to fit all states in view.',
@@ -53,6 +53,7 @@ const desktopInstructions = [
   'Click "PNG" to export the diagram as an image.',
   'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA/PDA).',
   'PDA transitions use the format: input, pop \u2192 push. Switch to PDA type to define stack operations.',
+  'TM transitions use the format: read \u2192 write, move (L/S/R). Switch to TM type and use the blank-symbol button to fill the default blank.',
 ];
 
 const mobileInstructions = [
@@ -68,7 +69,8 @@ const mobileInstructions = [
   'Tap Simulate in the bottom bar to enter simulation mode.',
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
-  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA only).',
+  'Use the \u03B5 button in the transition editor to add epsilon transitions (NFA/PDA).',
+  'TM transitions use the format: read \u2192 write, move (L/S/R).',
   'Open the hamburger menu to Save, Load, or Export PNG.',
   'Toggle dark mode or switch between touch/desktop UI from the hamburger menu.',
 ];

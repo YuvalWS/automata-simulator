@@ -1,8 +1,9 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useAutomatonStore } from '@/stores/automaton-store';
-import type { Automaton, PdaRule } from '@/models/automaton';
+import type { Automaton, PdaRule, TmRule } from '@/models/automaton';
 import { useEditorStore } from '@/stores/editor-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { useEditingLocked, EDITING_LOCKED_MESSAGE } from '@/hooks/use-editing-locked';
 import { computeEdgePaths } from '@/services/layout/edge-routing';
 import { StateNode } from './StateNode';
 import type { SimulationStatus } from './StateNode';
@@ -31,6 +32,7 @@ interface SymbolModalState {
   position: { x: number; y: number };
   existingSymbols?: string[];
   existingPdaRules?: PdaRule[];
+  existingTmRules?: TmRule[];
   editingTransitionId?: string;
 }
 
@@ -65,7 +67,7 @@ export function AutomataCanvas() {
   const pendingTransitionSource = useEditorStore((s) => s.pendingTransitionSource);
   const setPendingTransitionSource = useEditorStore((s) => s.setPendingTransitionSource);
 
-  const simIsActive = useSimulationStore((s) => s.isActive);
+  const editingLocked = useEditingLocked();
   const simTrace = useSimulationStore((s) => s.trace);
   const simCurrentStep = useSimulationStore((s) => s.currentStep);
   const simSnapshot = simTrace ? (simTrace.snapshots[simCurrentStep] ?? null) : null;
@@ -76,10 +78,31 @@ export function AutomataCanvas() {
   const [symbolModal, setSymbolModal] = useState<SymbolModalState | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
-  const [handleHover, setHandleHover] = useState<{ stateId: string; angle: number } | null>(null);
+  const [handleHover, setHandleHover] = useState<{ stateId: string; cursor: { x: number; y: number } } | null>(null);
+  const [lockedHint, setLockedHint] = useState<{ x: number; y: number } | null>(null);
+  const lockedHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
+
+  const showLockedHint = useCallback((clientX: number, clientY: number) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setLockedHint({ x: clientX - rect.left, y: clientY - rect.top });
+    if (lockedHintTimer.current) clearTimeout(lockedHintTimer.current);
+    lockedHintTimer.current = setTimeout(() => setLockedHint(null), 2500);
+  }, []);
+
+  useEffect(() => {
+    if (!editingLocked) setLockedHint(null);
+  }, [editingLocked]);
+
+  useEffect(
+    () => () => {
+      if (lockedHintTimer.current) clearTimeout(lockedHintTimer.current);
+    },
+    [],
+  );
 
   // Helper: is a given id in the current selection?
   const isSelected = useCallback(
@@ -117,8 +140,9 @@ export function AutomataCanvas() {
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
 
-      // During simulation, only allow panning
-      if (simIsActive) {
+      // During simulation, only allow panning — show a hint that editing is locked
+      if (editingLocked) {
+        showLockedHint(e.clientX, e.clientY);
         const target = e.target as SVGElement;
         const isCanvas = target === svgRef.current || (target as unknown as HTMLElement).dataset?.canvasBg === 'true';
         if (isCanvas) {
@@ -161,7 +185,7 @@ export function AutomataCanvas() {
         }
       }
     },
-    [simIsActive, placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, setSelectionBox, panX, panY],
+    [editingLocked, placingNewState, getSvgPoint, addState, stopPlacingState, clearSelection, setPendingTransitionSource, setSelectionBox, panX, panY],
   );
 
   const handleMouseMove = useCallback(
@@ -178,7 +202,7 @@ export function AutomataCanvas() {
       }
 
       // During simulation, no editing interactions
-      if (simIsActive) return;
+      if (editingLocked) return;
 
       // Rubber-band selection
       if (selectionBox) {
@@ -234,18 +258,20 @@ export function AutomataCanvas() {
         return;
       }
 
-      // Show "+" hint when hovering over empty canvas space, and compute handle angle for nearby states
+      // Track the cursor position for nearby states — drives the "new transition" handle
+      // (arrow stretches from state edge to cursor, terminating in a `+` circle).
       const svgPoint = getSvgPoint(e.clientX, e.clientY);
-      let nearestState: { id: string; dist: number; angle: number } | null = null;
+      let nearestState: { id: string; dist: number } | null = null;
       for (const s of automaton.states) {
         const dx = svgPoint.x - s.position.x;
         const dy = svgPoint.y - s.position.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist <= 60 && (!nearestState || dist < nearestState.dist)) {
-          nearestState = { id: s.id, dist, angle: Math.atan2(dy, dx) };
+        // 108 = state radius (28) + ~80px reach (≈ 2 cm at typical DPI)
+        if (dist <= 108 && (!nearestState || dist < nearestState.dist)) {
+          nearestState = { id: s.id, dist };
         }
       }
-      setHandleHover(nearestState ? { stateId: nearestState.id, angle: nearestState.angle } : null);
+      setHandleHover(nearestState ? { stateId: nearestState.id, cursor: svgPoint } : null);
 
       // Suppress "+" hint when near a transition edge
       let nearTransition = false;
@@ -264,7 +290,7 @@ export function AutomataCanvas() {
       }
       setHoverPoint(nearestState || nearTransition ? null : svgPoint);
     },
-    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, getSvgPoint, setViewport, setSelectionBox, setSelection, updateDrawingTransition, zoom, automaton.states, automaton.transitions, moveState],
+    [isPanning, editingLocked, selectionBox, dragState, drawingTransition, getSvgPoint, setViewport, setSelectionBox, setSelection, updateDrawingTransition, zoom, automaton.states, automaton.transitions, moveState],
   );
 
   const handleMouseUp = useCallback(
@@ -272,7 +298,7 @@ export function AutomataCanvas() {
       if (isPanning) {
         setIsPanning(false);
         // If the user barely moved the mouse and the "+" hint is visible, treat as click-to-add
-        if (mouseDownPos.current && !simIsActive && hoverPoint) {
+        if (mouseDownPos.current && !editingLocked && hoverPoint) {
           const dx = e.clientX - mouseDownPos.current.x;
           const dy = e.clientY - mouseDownPos.current.y;
           if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) {
@@ -283,7 +309,7 @@ export function AutomataCanvas() {
         return;
       }
 
-      if (simIsActive) return;
+      if (editingLocked) return;
 
       // Finalize rubber-band selection
       if (selectionBox) {
@@ -326,7 +352,7 @@ export function AutomataCanvas() {
         return;
       }
     },
-    [isPanning, simIsActive, selectionBox, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition, getSvgPoint, addState, setSelectionBox],
+    [isPanning, editingLocked, selectionBox, dragState, drawingTransition, findStateAtPoint, stopDrawingTransition, getSvgPoint, addState, setSelectionBox],
   );
 
   const handleWheel = useCallback(
@@ -352,7 +378,7 @@ export function AutomataCanvas() {
 
   const handleStateMouseDown = useCallback(
     (e: React.MouseEvent, stateId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       e.stopPropagation();
       mouseDownPos.current = { x: e.clientX, y: e.clientY };
       didDrag.current = false;
@@ -402,12 +428,12 @@ export function AutomataCanvas() {
         });
       }
     },
-    [simIsActive, automaton, getSvgPoint, setSelection, toggleInSelection, selection],
+    [editingLocked, automaton, getSvgPoint, setSelection, toggleInSelection, selection],
   );
 
   const handleStateMouseUp = useCallback(
     (e: React.MouseEvent, stateId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       if (!mouseDownPos.current) return;
       const dx = e.clientX - mouseDownPos.current.x;
       const dy = e.clientY - mouseDownPos.current.y;
@@ -429,12 +455,12 @@ export function AutomataCanvas() {
         setPendingTransitionSource(stateId);
       }
     },
-    [simIsActive, pendingTransitionSource, setPendingTransitionSource],
+    [editingLocked, pendingTransitionSource, setPendingTransitionSource],
   );
 
   const handleStateDoubleClick = useCallback(
     (e: React.MouseEvent, stateId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       e.stopPropagation();
       setPendingTransitionSource(null);
       setSymbolModal({
@@ -443,34 +469,34 @@ export function AutomataCanvas() {
         position: { x: e.clientX, y: e.clientY },
       });
     },
-    [simIsActive, setPendingTransitionSource],
+    [editingLocked, setPendingTransitionSource],
   );
 
   const handleHandleDragStart = useCallback(
     (e: React.MouseEvent, stateId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       e.stopPropagation();
       const state = automaton.states.find((s) => s.id === stateId);
       if (state) {
         startDrawingTransition(stateId, state.position);
       }
     },
-    [simIsActive, automaton.states, startDrawingTransition],
+    [editingLocked, automaton.states, startDrawingTransition],
   );
 
   const handleTransitionClick = useCallback(
     (e: React.MouseEvent, transitionId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       e.stopPropagation();
       setPendingTransitionSource(null);
       setSelection({ type: 'transition', id: transitionId });
     },
-    [simIsActive, setSelection, setPendingTransitionSource],
+    [editingLocked, setSelection, setPendingTransitionSource],
   );
 
   const handleTransitionDoubleClick = useCallback(
     (e: React.MouseEvent, transitionId: string) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       e.stopPropagation();
       const transition = automaton.transitions.find((t) => t.id === transitionId);
       if (transition) {
@@ -480,24 +506,27 @@ export function AutomataCanvas() {
           position: { x: e.clientX, y: e.clientY },
           existingSymbols: transition.symbols,
           existingPdaRules: transition.pdaRules,
+          existingTmRules: transition.tmRules,
           editingTransitionId: transitionId,
         });
       }
     },
-    [simIsActive, automaton.transitions],
+    [editingLocked, automaton.transitions],
   );
 
   const handleSymbolModalSubmit = useCallback(
-    (symbols: string[], pdaRules?: PdaRule[]) => {
+    (symbols: string[], pdaRules?: PdaRule[], tmRules?: TmRule[]) => {
       if (!symbolModal) return;
       if (symbolModal.editingTransitionId) {
         if (pdaRules) {
           updateTransition(symbolModal.editingTransitionId, { pdaRules });
+        } else if (tmRules) {
+          updateTransition(symbolModal.editingTransitionId, { tmRules });
         } else {
           updateTransition(symbolModal.editingTransitionId, { symbols });
         }
       } else {
-        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols, pdaRules);
+        addTransition(symbolModal.sourceId, symbolModal.targetId, symbols, pdaRules, tmRules);
       }
       setSymbolModal(null);
     },
@@ -561,7 +590,7 @@ export function AutomataCanvas() {
     onTap: (clientX, clientY, _target) => {
       setContextMenu(null);
 
-      if (simIsActive) return;
+      if (editingLocked) return;
 
       // Placing new state mode
       if (placingNewState) {
@@ -603,7 +632,7 @@ export function AutomataCanvas() {
     },
 
     onDoubleTap: (clientX, clientY, _target) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
       setContextMenu(null);
 
       const state = findStateNearClient(clientX, clientY);
@@ -624,13 +653,15 @@ export function AutomataCanvas() {
           targetId: transition.targetId,
           position: { x: clientX, y: clientY },
           existingSymbols: transition.symbols,
+          existingPdaRules: transition.pdaRules,
+          existingTmRules: transition.tmRules,
           editingTransitionId: transition.id,
         });
       }
     },
 
     onLongPress: (clientX, clientY, _target) => {
-      if (simIsActive) return;
+      if (editingLocked) return;
 
       const state = findStateNearClient(clientX, clientY);
       if (state) {
@@ -663,6 +694,8 @@ export function AutomataCanvas() {
                 targetId: transition.targetId,
                 position: { x: clientX, y: clientY },
                 existingSymbols: transition.symbols,
+                existingPdaRules: transition.pdaRules,
+                existingTmRules: transition.tmRules,
                 editingTransitionId: transition.id,
               }),
             },
@@ -687,7 +720,7 @@ export function AutomataCanvas() {
     onDragStart: (clientX, clientY, _target) => {
       setContextMenu(null);
       const state = findStateNearClient(clientX, clientY);
-      if (state && !simIsActive) {
+      if (state && !editingLocked) {
         const point = getSvgPoint(clientX, clientY);
         touchDragRef.current = {
           type: 'state',
@@ -788,14 +821,14 @@ export function AutomataCanvas() {
     return 'active';
   };
 
-  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions, automaton.type);
+  const edgePaths = computeEdgePaths(automaton.states, automaton.transitions, automaton.type, automaton.tmBlankSymbol);
   const initialState = automaton.states.find((s) => s.isInitial);
   const drawingSource = drawingTransition
     ? automaton.states.find((s) => s.id === drawingTransition.sourceId)
     : null;
 
   const cursorClass = placingNewState ? 'cursor-crosshair' : '';
-  const showHoverHint = hoverPoint && !drawingTransition && !dragState && !placingNewState && !simIsActive;
+  const showHoverHint = hoverPoint && !drawingTransition && !dragState && !placingNewState && !editingLocked;
 
   // Rubber-band box coordinates
   const boxRect = selectionBox ? {
@@ -888,6 +921,7 @@ export function AutomataCanvas() {
                 edgePath={ep}
                 transition={transition}
                 automatonType={automaton.type}
+                tmBlankSymbol={automaton.tmBlankSymbol}
                 isSelected={isSelected('transition', ep.transitionId)}
                 isSimActive={isSimActiveTransition}
                 onClick={handleTransitionClick}
@@ -910,8 +944,8 @@ export function AutomataCanvas() {
               isSelected={isSelected('state', state.id)}
               isPendingSource={pendingTransitionSource?.stateId === state.id}
               simulationStatus={getSimStatus(state.id)}
-              handleAngle={!isMobile && handleHover?.stateId === state.id ? handleHover.angle : undefined}
-              showHandle={false}
+              editingLocked={editingLocked}
+              handleCursor={!isMobile && handleHover?.stateId === state.id ? handleHover.cursor : undefined}
               onMouseDown={handleStateMouseDown}
               onMouseUp={handleStateMouseUp}
               onDoubleClick={handleStateDoubleClick}
@@ -962,13 +996,27 @@ export function AutomataCanvas() {
         </g>
       </svg>
 
+      {lockedHint && (
+        <div
+          className="canvas-locked-hint"
+          style={{ left: lockedHint.x, top: lockedHint.y }}
+          role="status"
+          data-testid="canvas-locked-hint"
+        >
+          <span className="canvas-locked-hint-icon" aria-hidden="true">{'⚠'}</span>
+          <span>{EDITING_LOCKED_MESSAGE}</span>
+        </div>
+      )}
+
       {symbolModal && (
         <TransitionSymbolModal
           position={symbolModal.position}
           initialSymbols={symbolModal.existingSymbols}
           initialPdaRules={symbolModal.existingPdaRules}
+          initialTmRules={symbolModal.existingTmRules}
           automatonType={automaton.type}
           pdaStackMode={automaton.pdaStackMode}
+          tmBlankSymbol={automaton.tmBlankSymbol}
           onSubmit={handleSymbolModalSubmit}
           onCancel={handleSymbolModalCancel}
         />

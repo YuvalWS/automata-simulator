@@ -92,6 +92,77 @@ export class AutomatonBuilder {
   }
 
   /**
+   * Load a simple deterministic TM:
+   * q0 reads '0', writes '1', moves R, → q1.
+   * q1 reads '⊔' (blank), stays, → q2 (accepting).
+   * Accepts the single-symbol word '0'.
+   */
+  async loadSimpleTM() {
+    await this.page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      if (!stores) throw new Error('Stores not exposed — is dev mode running?');
+      const store = stores.automatonStore.getState();
+      store.newAutomaton('Test TM');
+      store.setType('TM');
+      store.setAcceptanceMode('finalState');
+      store.setTmMode('deterministic');
+      store.setTmBlankSymbol('⊔');
+      const automaton = stores.automatonStore.getState().automaton;
+      const q0 = automaton.states[0];
+      const q1 = store.addState({ x: 350, y: 250 });
+      const q2 = store.addState({ x: 500, y: 250 });
+      store.toggleAccepting(q2.id);
+
+      store.addTransition(q0.id, q1.id, [], undefined, [
+        { readSymbols: ['0'], writeSymbol: '1', direction: 'R' },
+      ]);
+      store.addTransition(q1.id, q2.id, [], undefined, [
+        { readSymbols: ['⊔'], direction: 'S' },
+      ]);
+    });
+  }
+
+  /**
+   * Load an infinite-loop TM: q0 on any read writes blank, moves R, stays in q0.
+   * Used to test the timeout step cap.
+   */
+  async loadInfiniteLoopTM() {
+    await this.page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      const store = stores.automatonStore.getState();
+      store.newAutomaton('Loop TM');
+      store.setType('TM');
+      store.setTmBlankSymbol('⊔');
+      const automaton = stores.automatonStore.getState().automaton;
+      const q0 = automaton.states[0];
+      store.addTransition(q0.id, q0.id, [], undefined, [
+        { readSymbols: ['a', '⊔'], direction: 'R' },
+      ]);
+    });
+  }
+
+  /**
+   * Build a 2-state TM whose single transition uses a multi-read rule with a write.
+   * Used to assert the on-canvas label format `0,1 → X, R`.
+   */
+  async loadMultiReadTM() {
+    await this.page.evaluate(() => {
+      const stores = (window as any).__stores__;
+      const store = stores.automatonStore.getState();
+      store.newAutomaton('Multi-read TM');
+      store.setType('TM');
+      store.setTmBlankSymbol('⊔');
+      const automaton = stores.automatonStore.getState().automaton;
+      const q0 = automaton.states[0];
+      const q1 = store.addState({ x: 350, y: 250 });
+      store.toggleAccepting(q1.id);
+      store.addTransition(q0.id, q1.id, [], undefined, [
+        { readSymbols: ['0', '1'], writeSymbol: 'X', direction: 'R' },
+      ]);
+    });
+  }
+
+  /**
    * Reset to a fresh empty automaton (with just q0 as initial).
    */
   async reset() {

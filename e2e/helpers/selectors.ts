@@ -9,6 +9,8 @@ export const SEL = {
   automatonNameInput: '[data-testid="automaton-name-input"]',
   automatonTypeSelect: '[data-testid="automaton-type-select"]',
   automatonAlphabetInput: '[data-testid="automaton-alphabet-input"]',
+  alphabetWarning: '[data-testid="alphabet-warning"]',
+  canvasLockedHint: '[data-testid="canvas-locked-hint"]',
 
   // State properties
   stateProperties: '[data-testid="state-properties"]',
@@ -35,9 +37,15 @@ export const SEL = {
   simBatchInput: '.sim-batch-input',
   simStatus: '.sim-status',
   simModeToggle: '.sim-mode-toggle',
+  simTmTape: '[data-testid="sim-tm-tape"]',
+  simTmSection: '[data-testid="sim-tm-section"]',
+
+  // TM properties
+  tmModeSelect: '[data-testid="tm-mode-select"]',
+  tmAcceptanceModeSelect: '[data-testid="tm-acceptance-mode-select"]',
+  tmBlankSymbolSelect: '[data-testid="tm-blank-symbol-select"]',
 
   // Toolbar buttons
-  toolbarNewState: '.toolbar-new-state',
   toolbarSimulate: '.toolbar-simulate',
   toolbarSimulateActive: '.toolbar-simulate-active',
   toolbarUndo: 'button[title*="Undo"]',

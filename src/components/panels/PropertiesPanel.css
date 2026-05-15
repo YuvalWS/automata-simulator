@@ -96,6 +96,21 @@
   color: var(--color-text-secondary);
 }
 
+.panel-warning {
+  font-size: 13px;
+  color: var(--color-warning);
+  line-height: 1.4;
+}
+
+.panel-warning-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.panel-warning-list li {
+  font-family: var(--font-mono);
+}
+
 .panel-stats {
   display: flex;
   gap: 16px;
@@ -156,4 +171,41 @@
 
 .pda-prop-add:hover {
   background: var(--color-bg);
+}
+
+/* Input row with a symbol quick-insert button */
+.prop-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.prop-input-row .panel-input {
+  width: auto;
+  flex: 1;
+}
+
+.prop-sym-btn {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  transition: background 0.15s, color 0.15s;
+}
+
+.prop-sym-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.prop-sym-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
