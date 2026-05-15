@@ -10,6 +10,7 @@ export const SEL = {
   automatonTypeSelect: '[data-testid="automaton-type-select"]',
   automatonAlphabetInput: '[data-testid="automaton-alphabet-input"]',
   alphabetWarning: '[data-testid="alphabet-warning"]',
+  canvasLockedHint: '[data-testid="canvas-locked-hint"]',
 
   // State properties
   stateProperties: '[data-testid="state-properties"]',

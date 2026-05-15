@@ -32,6 +32,7 @@ Test multiple words at once and instantly see which are accepted or rejected.
 - **Pre-simulation validation** — detects DFA symbol conflicts, missing transitions, no initial state; suggests switching to NFA when conflicts are found
 - **Alphabet warning** — when an alphabet is defined, the properties panel lists any transitions (by source → target) whose symbols are not in it
 - **Auto-run & speed control** — auto-step through simulation at configurable speed (100ms–2s)
+- **Distraction-free simulation** — editing controls (the new-rule handles on states) are hidden during simulation; clicking anywhere on the diagram shows a warning hint prompting you to exit simulation to edit
 - **DFA, NFA, PDA & TM support** — toggle between deterministic, nondeterministic, pushdown, and Turing machine modes
 - **Epsilon transitions** — NFA supports ε-transitions with automatic epsilon-closure during simulation
 - **PDA stack operations** — define transitions with input symbol, stack pop/peek, and stack push; supports final-state and empty-stack acceptance modes with real-time stack visualization during simulation

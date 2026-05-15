@@ -107,6 +107,44 @@ test.describe('Simulation', () => {
     expect(isActive).toBe(false);
   });
 
+  test('editing handles on states are hidden during simulation', async ({ page }) => {
+    // In edit mode the new-rule handles exist in the DOM
+    expect(await page.locator('.state-transition-handle').count()).toBeGreaterThan(0);
+
+    await page.locator(SEL.toolbarSimulate).click();
+
+    // During simulation they are removed entirely
+    await expect(page.locator('.state-transition-handle')).toHaveCount(0);
+
+    // Exiting simulation restores the handles
+    await page.locator(SEL.simExitBtn).click();
+    expect(await page.locator('.state-transition-handle').count()).toBeGreaterThan(0);
+  });
+
+  test('clicking the canvas during simulation surfaces an editing-locked hint', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+
+    // No hint until the user actually tries to interact with the diagram
+    await expect(page.locator(SEL.canvasLockedHint)).toHaveCount(0);
+
+    await canvas.clickCanvas(600, 300);
+
+    const hint = page.locator(SEL.canvasLockedHint);
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText('Exit simulation mode to edit the machine');
+    // The warning icon is rendered inside the hint
+    await expect(hint.locator('.canvas-locked-hint-icon')).toBeVisible();
+
+    // The hint auto-dismisses after a short delay
+    await expect(hint).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test('clicking a state during simulation also surfaces the editing-locked hint', async ({ page }) => {
+    await page.locator(SEL.toolbarSimulate).click();
+    await page.locator(SEL.allStates).first().click();
+    await expect(page.locator(SEL.canvasLockedHint)).toBeVisible();
+  });
+
   test('during simulation, clicking canvas does not create states', async ({ page }) => {
     await page.locator(SEL.toolbarSimulate).click();
     const countBefore = await canvas.stateCount();

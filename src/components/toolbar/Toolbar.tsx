@@ -2,6 +2,7 @@ import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useHistoryStore } from '@/stores/history-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { useEditingLocked } from '@/hooks/use-editing-locked';
 import { useTheme } from '@/hooks/use-theme';
 import { useViewport } from '@/hooks/use-viewport';
 import { useFileOperations } from '@/hooks/use-file-operations';
@@ -20,6 +21,7 @@ export function Toolbar() {
   const simIsActive = useSimulationStore((s) => s.isActive);
   const enterSimulation = useSimulationStore((s) => s.enterSimulation);
   const exitSimulation = useSimulationStore((s) => s.exitSimulation);
+  const editingLocked = useEditingLocked();
   const { theme, toggleTheme } = useTheme();
   const { isPhone, isDesktop, isMobile, uiMode, setUiMode } = useViewport();
   const { handleNew, handleSave, handleLoad, handleExportPng } = useFileOperations();
@@ -53,17 +55,17 @@ export function Toolbar() {
       <div className="toolbar toolbar-tablet" data-testid="toolbar">
         <HamburgerMenu />
         <div className="toolbar-group">
-          <button className="toolbar-btn" onClick={undo} disabled={!hasPast || simIsActive} title="Undo">
+          <button className="toolbar-btn" onClick={undo} disabled={!hasPast || editingLocked} title="Undo">
             Undo
           </button>
-          <button className="toolbar-btn" onClick={redo} disabled={!hasFuture || simIsActive} title="Redo">
+          <button className="toolbar-btn" onClick={redo} disabled={!hasFuture || editingLocked} title="Redo">
             Redo
           </button>
         </div>
 
 
         <div className="toolbar-group toolbar-actions">
-          {!simIsActive && (
+          {!editingLocked && (
             <button
               className={`toolbar-btn toolbar-new-state ${placingNewState ? 'active' : ''}`}
               onClick={() => startPlacingState()}
@@ -103,29 +105,29 @@ export function Toolbar() {
   return (
     <div className="toolbar" data-testid="toolbar">
       <div className="toolbar-group">
-        <button className="toolbar-btn toolbar-icon-btn" onClick={handleNew} disabled={simIsActive} title="New Automaton (Ctrl+N)">
+        <button className="toolbar-btn toolbar-icon-btn" onClick={handleNew} disabled={editingLocked} title="New Automaton (Ctrl+N)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 2h7l3 3v9H3z"/><path d="M8 6v5M5.5 8.5h5"/></svg>
         </button>
         <button className="toolbar-btn toolbar-icon-btn" onClick={handleSave} title="Save (Ctrl+S)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 2h8l2 2v9H3z"/><path d="M5 2v4h5V2"/><path d="M5 14v-4h6v4"/></svg>
         </button>
-        <button className="toolbar-btn toolbar-icon-btn" onClick={handleLoad} disabled={simIsActive} title="Load (Ctrl+O)">
+        <button className="toolbar-btn toolbar-icon-btn" onClick={handleLoad} disabled={editingLocked} title="Load (Ctrl+O)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h4l1.5 2H14v7H2z"/></svg>
         </button>
         <button className="toolbar-btn toolbar-icon-btn" onClick={handleExportPng} disabled={automaton.states.length === 0} title="Export as PNG">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><circle cx="5.5" cy="5.5" r="1.2"/><path d="M2 11l3-3 2.5 2.5L10 8l4 4"/></svg>
         </button>
         <span className="toolbar-separator" />
-        <button className="toolbar-btn toolbar-icon-btn" onClick={undo} disabled={!hasPast || simIsActive} title="Undo (Ctrl+Z)">
+        <button className="toolbar-btn toolbar-icon-btn" onClick={undo} disabled={!hasPast || editingLocked} title="Undo (Ctrl+Z)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5L1 8l3 3"/><path d="M1 8h8.5a3.5 3.5 0 010 7H8"/></svg>
         </button>
-        <button className="toolbar-btn toolbar-icon-btn" onClick={redo} disabled={!hasFuture || simIsActive} title="Redo (Ctrl+Shift+Z)">
+        <button className="toolbar-btn toolbar-icon-btn" onClick={redo} disabled={!hasFuture || editingLocked} title="Redo (Ctrl+Shift+Z)">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5l3 3-3 3"/><path d="M15 8H6.5a3.5 3.5 0 000 7H8"/></svg>
         </button>
       </div>
 
       <div className="toolbar-group toolbar-actions">
-        {!simIsActive && (
+        {!editingLocked && (
           <button
             className={`toolbar-btn toolbar-new-state ${placingNewState ? 'active' : ''}`}
             onClick={() => startPlacingState()}

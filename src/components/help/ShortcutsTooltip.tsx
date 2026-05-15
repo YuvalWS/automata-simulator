@@ -45,7 +45,7 @@ const desktopInstructions = [
   'Shift+click states to add/remove from multi-selection. Shift+drag on canvas for rubber-band selection.',
   'Scroll to zoom, drag empty canvas to pan.',
   'Select element(s) and press Delete to remove them. Ctrl+A to select all.',
-  'Click Simulate to enter simulation mode. Run auto-plays the trace.',
+  'Click Simulate to enter simulation mode. Run auto-plays the trace. Editing controls are hidden while simulating — exit simulation to edit the machine.',
   'Use "Random" to generate a random word from the alphabet.',
   'Switch to Batch mode to test multiple words at once.',
   'Click "Fit" in the zoom controls to fit all states in view.',

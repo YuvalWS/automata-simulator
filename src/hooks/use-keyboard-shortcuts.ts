@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { useAutomatonStore } from '@/stores/automaton-store';
 import { useSimulationStore } from '@/stores/simulation-store';
+import { isEditingLocked } from '@/hooks/use-editing-locked';
 import { useTabStore, isTabEmpty } from '@/stores/tab-store';
 import { saveToJsonFile, loadFromJsonFile, clearFileHandle } from '@/services/serialization/file-io';
 import { setActiveTabFileHandle } from '@/stores/tab-store';
@@ -25,7 +26,7 @@ export function useKeyboardShortcuts() {
       const tabStore = useTabStore.getState();
 
       // Undo/redo work even when a sidebar input is focused
-      if (ctrl && !simState.isActive) {
+      if (ctrl && !isEditingLocked()) {
         const key = e.key.toLowerCase();
         if (key === 'z') { e.preventDefault(); if (e.shiftKey) { redo(); } else { undo(); } return; }
         if (key === 'y') { e.preventDefault(); redo(); return; }
@@ -110,8 +111,8 @@ export function useKeyboardShortcuts() {
             return;
         }
 
-        // Block remaining ctrl shortcuts during simulation
-        if (simState.isActive) return;
+        // Block remaining ctrl shortcuts when editing is locked
+        if (isEditingLocked()) return;
 
         switch (e.key.toLowerCase()) {
           case 's':
@@ -156,8 +157,8 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      // Non-modifier shortcuts (editing mode only — already blocked above if simulating)
-      if (simState.isActive) return;
+      // Non-modifier shortcuts (editing only — already blocked above if simulating)
+      if (isEditingLocked()) return;
 
       switch (e.key) {
         case ' ':

@@ -12,6 +12,7 @@ interface StateNodeProps {
   isSelected: boolean;
   isPendingSource?: boolean;
   simulationStatus?: SimulationStatus;
+  editingLocked?: boolean;
   handleAngle?: number;
   showHandle?: boolean;
   onMouseDown: (e: React.MouseEvent, stateId: string) => void;
@@ -25,6 +26,7 @@ export function StateNode({
   isSelected,
   isPendingSource,
   simulationStatus,
+  editingLocked,
   handleAngle,
   showHandle,
   onMouseDown,
@@ -121,8 +123,8 @@ export function StateNode({
       >
         {state.name}
       </text>
-      {/* Drag handle for creating transitions — follows mouse angle around state, hidden during simulation */}
-      {!simulationStatus && (
+      {/* Drag handle for creating transitions — follows mouse angle around state, hidden while editing is locked */}
+      {!simulationStatus && !editingLocked && (
         <>
           <circle
             className={handleClass}
