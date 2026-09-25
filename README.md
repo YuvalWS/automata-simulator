@@ -205,3 +205,9 @@ The current automaton is automatically saved to browser localStorage every 500ms
 - Zod for save/load schema validation
 - Vitest for unit tests, Playwright for E2E tests
 - Docker + Express for deployment
+
+## License
+
+Copyright (C) 2026 [Yuval Weiss](https://github.com/YuvalWS).
+
+Licensed under the [GNU General Public License v3.0 or later](LICENSE). You're free to use, modify and share this project; any distributed copy or derivative must remain under the GPL and keep this copyright notice. Credit with a link to the [repository](https://github.com/YuvalWS/automata-simulator) is appreciated.
