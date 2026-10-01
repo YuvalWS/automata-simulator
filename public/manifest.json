@@ -1,7 +1,7 @@
 {
   "name": "Automata Simulator",
   "short_name": "Automata",
-  "description": "A visual editor and simulator for DFA and NFA finite automata",
+  "description": "A visual editor and simulator for DFA, NFA, PDA and Turing machines",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafafa",
